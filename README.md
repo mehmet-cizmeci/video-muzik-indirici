@@ -128,7 +128,7 @@ Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; son
 | [📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md) | Ekranın her bölümü, adım adım indirme, listeler, oynatma listeleri, ipuçları |
 | [❓ Sık Sorulan Sorular ve Sorun Giderme](docs/SSS.md) | Hata mesajları, SmartScreen uyarısı, yavaş indirme, format seçimi |
 | [⚙ Teknik Bilgi](docs/TEKNIK.md) | Nasıl çalışır, dosya konumları, kullanılan yt-dlp ayarları, derleme |
-| [🔏 Dijital İmza Rehberi](docs/IMZALAMA.md) | Exe'nin nasıl imzalandığı, imzanın nasıl doğrulanacağı |
+| [🔏 Dijital İmza Rehberi](docs/IMZALAMA.md) | İmza durumu (exe şu an imzasız) ve ileride imzalama altyapısı |
 | [📝 Değişiklik Günlüğü](CHANGELOG.md) | Sürüm geçmişi |
 
 ## Yasal uyarı
