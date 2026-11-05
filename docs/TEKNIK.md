@@ -150,6 +150,7 @@ Betik şunları yapar:
 1. `pip install pyinstaller pillow`
 2. `python make_icon.py` → `indirici.ico` simgesini üretir
 3. `PyInstaller --onefile --windowed --name VideoMuzikIndirici --icon indirici.ico --add-data "indirici.ico;." indirici.pyw`
+4. `tools\imzala.ps1` ile exe'yi imzalar (sertifika bağlı değilse imzasız bırakıp uyarır; `build.bat /imzazorunlu` ile hata verir). Ayrıntılar: [Dijital İmza Rehberi](IMZALAMA.md)
 
 Çıktı: `dist\VideoMuzikIndirici.exe` (~10 MB). yt-dlp ve FFmpeg exe'nin **içine gömülmez**; böylece exe küçük kalır ve yt-dlp bağımsız olarak güncellenebilir.
 
@@ -160,7 +161,8 @@ video-muzik-indirici/
 ├── indirici.pyw            # uygulamanın tamamı
 ├── make_icon.py            # simge üretici (Pillow)
 ├── indirici.ico            # uygulama simgesi
-├── build.bat               # exe derleme betiği
+├── build.bat               # exe derleme (+ imzalama) betiği
+├── tools/imzala.ps1        # ortak kod imzalama betiği
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
@@ -168,6 +170,7 @@ video-muzik-indirici/
     ├── KULLANIM-KILAVUZU.md
     ├── SSS.md
     ├── TEKNIK.md
+    ├── IMZALAMA.md
     └── img/ana-ekran.png
 ```
 

@@ -119,7 +119,7 @@ cd video-muzik-indirici
 python indirici.pyw
 ```
 
-Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; sonuç `dist\VideoMuzikIndirici.exe` olur. Ayrıntılar: [Teknik Bilgi](docs/TEKNIK.md#kaynaktan-derleme).
+Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; sonuç `dist\VideoMuzikIndirici.exe` olur. Kod imzalama sertifikası bağlıysa exe otomatik imzalanır ([Dijital İmza Rehberi](docs/IMZALAMA.md)). Ayrıntılar: [Teknik Bilgi](docs/TEKNIK.md#kaynaktan-derleme).
 
 ## Dokümantasyon
 
@@ -128,6 +128,7 @@ Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; son
 | [📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md) | Ekranın her bölümü, adım adım indirme, listeler, oynatma listeleri, ipuçları |
 | [❓ Sık Sorulan Sorular ve Sorun Giderme](docs/SSS.md) | Hata mesajları, SmartScreen uyarısı, yavaş indirme, format seçimi |
 | [⚙ Teknik Bilgi](docs/TEKNIK.md) | Nasıl çalışır, dosya konumları, kullanılan yt-dlp ayarları, derleme |
+| [🔏 Dijital İmza Rehberi](docs/IMZALAMA.md) | Exe'nin nasıl imzalandığı, imzanın nasıl doğrulanacağı |
 | [📝 Değişiklik Günlüğü](CHANGELOG.md) | Sürüm geçmişi |
 
 ## Yasal uyarı
