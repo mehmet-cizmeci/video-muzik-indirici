@@ -133,7 +133,11 @@ Get-AuthenticodeSignature .\VideoMuzikIndirici.exe | Format-List Status, SignerC
 apksigner verify --print-certs VideoDongu-Android8+.apk
 ```
 
-Yayın notlarındaki SHA-256 sertifika parmak iziyle karşılaştırılabilir.
+Çıktıdaki `Signer #1 certificate SHA-256 digest` değeri videoloop için şu olmalıdır (v1.3 ve sonrası):
+
+```n d5b4819fd5037c74fa4b1719084db96b00cdd2ed2d67afbb50e30ac055b310e3
+```
+
 
 ---
 
