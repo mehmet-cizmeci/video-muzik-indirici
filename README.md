@@ -1,12 +1,13 @@
 <div align="center">
 
-<img src="indirici.ico" width="80" alt="Video Müzik İndirici simgesi">
+<img src="indirici.png" width="96" alt="Video Müzik İndirici simgesi">
 
 # Video Müzik İndirici
 
-**YouTube ve 1000'den fazla siteden video ve müzik indirmek için sade, Türkçe bir Windows masaüstü uygulaması.**
+**YouTube ve 1000'den fazla siteden video ve müzik indirmek için modern, Türkçe bir Windows uygulaması.**
 
-[yt-dlp](https://github.com/yt-dlp/yt-dlp) ve [FFmpeg](https://ffmpeg.org/) üzerine kuruludur. Kurulum gerektirmez; tek bir `.exe` dosyasıdır.
+İndirmeden önce **izleyin ve dinleyin**, formatı ve kaliteyi seçin, arka planda indirin. Uygulama kendini GitHub'dan **otomatik günceller**.
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) ve [FFmpeg](https://ffmpeg.org/) üzerine kuruludur; kurulum gerektirmez, tek bir `.exe` dosyasıdır.
 
 [![Son sürüm](https://img.shields.io/github/v/release/mehmet-cizmeci/video-muzik-indirici?label=s%C3%BCr%C3%BCm)](https://github.com/mehmet-cizmeci/video-muzik-indirici/releases/latest)
 [![İndirme](https://img.shields.io/github/downloads/mehmet-cizmeci/video-muzik-indirici/total?label=indirme)](https://github.com/mehmet-cizmeci/video-muzik-indirici/releases)
@@ -18,7 +19,7 @@
 [Sık Sorulan Sorular](docs/SSS.md) ·
 [Teknik Bilgi](docs/TEKNIK.md)
 
-<img src="docs/img/ana-ekran.png" alt="Video Müzik İndirici ana ekranı" width="820">
+<img src="docs/img/ana-ekran-dark.png" alt="Video Müzik İndirici ana ekranı (koyu tema)" width="860">
 
 </div>
 
@@ -29,6 +30,8 @@
 - [Özellikler](#özellikler)
 - [Hızlı başlangıç](#hızlı-başlangıç)
 - [Kısaca kullanım](#kısaca-kullanım)
+- [Önizleme](#önizleme)
+- [Otomatik güncelleme](#otomatik-güncelleme)
 - [Desteklenen formatlar](#desteklenen-formatlar)
 - [Kesintiye dayanıklı indirme](#kesintiye-dayanıklı-indirme)
 - [Sistem gereksinimleri](#sistem-gereksinimleri)
@@ -41,42 +44,66 @@
 
 | | |
 |---|---|
-| 🔗 **Tek URL veya liste** | Tek bir bağlantı yapıştırın ya da her satıra bir bağlantı yazın. `.txt` dosyasından toplu liste yükleyebilirsiniz. |
-| 🎬 **Üç indirme türü** | Video + Ses, Sadece Ses (müzik), Sadece Video (sessiz). |
-| 🎚 **Format ve kalite seçimi** | Video: mp4, mkv, webm — 4K'dan 240p'ye. Ses: mp3, m4a, opus, flac, wav — 320 kbps'ye kadar. |
-| 📂 **İndirme yeri** | Varsayılan olarak `İndirilenler\Video Muzik Indirici`. İstediğiniz klasörü seçebilirsiniz, seçim hatırlanır. |
-| ⏳ **Arka planda kuyruk** | İndirmeler sırayla ve arka planda yürür; aynı anda kaç indirme yapılacağını (1–5) siz seçersiniz. Arayüz donmaz. |
-| 📶 **Kesintiye dayanıklı** | İnternet koparsa bekler, gelince **kaldığı yerden** devam eder. Uyku sonrası takılan indirmeleri kendisi yeniden başlatır. |
-| 💾 **Kapatınca kaybolmaz** | Uygulamayı kapatsanız veya bilgisayar yeniden başlasa bile yarım kalan indirmeler bir sonraki açılışta otomatik sürer. |
+| 🎨 **Modern arayüz** | Kartlı, sade tasarım; **koyu ve açık tema** (tek tıkla değişir), Windows 11 ikonları. |
+| 👁 **Video ve ses önizleme** | Bağlantıyı yapıştırınca başlık, kanal, süre, küçük resim ve mevcut en yüksek çözünürlük otomatik gelir. ▶ ile **indirmeden izleyin veya dinleyin**. İnen dosyalar da uygulama içinde oynatılır. |
+| 🔄 **Kendini güncelleyen uygulama** | Yeni sürüm çıkınca haber verir; tek tıkla indirir, doğrular ve yeniden başlar. İndirmeler kaldığı yerden sürer. |
+| 🔗 **Tek URL veya liste** | Tek bir bağlantı, her satıra bir bağlantı, `.txt` dosyasından liste ya da tarayıcıdan **sürükle-bırak**. |
+| 🎬 **Üç indirme türü** | Video + Ses, Sadece Ses (müzik), Sessiz Video. |
+| 🎚 **Format ve kalite** | Video: mp4, mkv, webm — 4K'dan 240p'ye. Ses: mp3, m4a, opus, flac, wav — 320 kbps'ye kadar. |
+| ⏳ **Arka planda kuyruk** | İndirmeler sırayla ve arka planda yürür; aynı anda 1–5 indirme. İlerleme çubukları, hız ve kalan süre. |
+| 📶 **Kesintiye dayanıklı** | İnternet koparsa bekler, gelince **kaldığı yerden** devam eder; uyku sonrası takılan indirmeleri kendisi yeniden başlatır. |
+| 💾 **Kapatınca kaybolmaz** | Uygulama kapansa veya bilgisayar yeniden başlasa bile yarım kalan indirmeler sonraki açılışta sürer. |
 | 😴 **Uyku engelleme** | İndirme sürerken Windows'un kendiliğinden uykuya geçmesini engeller (isteğe bağlı). |
-| 📃 **Oynatma listeleri** | YouTube listelerinin tamamını, listenin adını taşıyan bir klasöre sıra numarasıyla indirir. |
-| 🖼 **Kapak ve bilgi etiketi** | Kapak resmini ve başlık/sanatçı bilgisini dosyaya gömer. İsteğe bağlı Türkçe/İngilizce altyazı. |
-| 🔄 **Kendini güncel tutar** | yt-dlp'yi tek tıkla ya da açılışta otomatik (günde bir) günceller. |
-| 🧰 **Sıfır kurulum** | Bilgisayarda yt-dlp veya FFmpeg yoksa ilk açılışta kendisi indirip kurar. Yönetici izni gerekmez. |
+| 📃 **Oynatma listeleri** | Listenin tamamını, liste adlı klasöre sıra numarasıyla indirir. |
+| 🖼 **Kapak ve etiket** | Kapak resmi ve başlık/sanatçı bilgisi dosyaya gömülür; isteğe bağlı Türkçe/İngilizce altyazı. |
+| 🧰 **Sıfır kurulum** | yt-dlp veya FFmpeg yoksa ilk açılışta kendisi indirir; yt-dlp'yi günde bir otomatik günceller. |
 
 ## Hızlı başlangıç
 
 1. **[Releases](https://github.com/mehmet-cizmeci/video-muzik-indirici/releases/latest)** sayfasından `VideoMuzikIndirici.exe` dosyasını indirin.
-2. Dosyayı istediğiniz bir klasöre koyun (örneğin Masaüstü) ve çift tıklayın.
-3. İlk açılışta yt-dlp ve FFmpeg bilgisayarda yoksa otomatik olarak indirilir (~140 MB, bir kereliğine).
-4. Bağlantıyı yapıştırın, **⬇ İndir / Kuyruğa ekle** düğmesine basın. Bu kadar!
+2. Dosyayı istediğiniz bir klasöre (örneğin Masaüstü) koyup çift tıklayın.
+3. İlk açılışta yt-dlp ve FFmpeg bilgisayarda yoksa otomatik indirilir (~140 MB, bir kereliğine).
+4. Bağlantıyı yapıştırın, önizlemeye bakın, **İndir**'e basın.
 
 > [!NOTE]
-> **"Windows bilgisayarınızı korudu" uyarısı çıkarsa:** Uygulama dijital olarak imzalanmadığı için Windows SmartScreen ilk çalıştırmada uyarı gösterebilir. **Ek bilgi → Yine de çalıştır** seçeneğine tıklayın. Ayrıntılar için [SSS](docs/SSS.md#windows-bilgisayarınızı-korudu-uyarısı-çıkıyor).
+> **"Windows bilgisayarınızı korudu" uyarısı çıkarsa:** Uygulama ücretli bir kod imzalama sertifikasıyla imzalanmadığı için Windows SmartScreen ilk çalıştırmada uyarı gösterebilir. **Ek bilgi → Yine de çalıştır** seçeneğine tıklayın. Ayrıntılar: [SSS](docs/SSS.md#windows-bilgisayarınızı-korudu-uyarısı-çıkıyor), [İmza durumu](docs/IMZALAMA.md).
+
+> [!TIP]
+> **1.x sürümünden geçiş:** 1.0.0 kendini güncelleyemez; 2.0.0'ı bir kez elle indirip eski exe'nin yerine koyun. Ayarlarınız ve yarım kalan indirmeleriniz korunur. Bundan sonraki sürümler otomatik gelir.
 
 ## Kısaca kullanım
 
 ```
-1. URL'yi yapıştırın          →  "Panodan yapıştır" ya da Ctrl+V
-2. Türü seçin                 →  Video + Ses / Sadece Ses / Sadece Video
-3. Format ve kaliteyi seçin   →  örn. mp4 · 1080p  ya da  mp3 · 320 kbps
-4. (İsteğe bağlı) klasör seçin →  "Gözat…"
-5. İndir                      →  "⬇ İndir / Kuyruğa ekle"  ya da Ctrl+Enter
+1. Bağlantıyı yapıştırın        →  "Yapıştır", Ctrl+V ya da tarayıcıdan sürükleyip bırakın
+2. Önizlemeye bakın             →  bilgiler otomatik gelir; ▶ ile izleyin / dinleyin
+3. Türü seçin                   →  Video + Ses / Sadece Ses / Sessiz Video
+4. Format ve kaliteyi seçin     →  örn. mp4 · 1080p  ya da  mp3 · 320 kbps
+5. İndirin                      →  "İndir"  ya da Ctrl+Enter
 ```
 
-Biten bir indirmeye **çift tıklayınca** dosya klasörde gösterilir. Satıra **sağ tıklayınca** dosyayı açma, iptal, yeniden deneme ve hata ayrıntısı seçenekleri çıkar.
+Biten bir indirmeye **çift tıklayınca** dosya önizleme panelinde oynatılır. Satıra **sağ tıklayınca** dosyayı açma, klasörde gösterme, iptal, yeniden deneme ve hata ayrıntısı seçenekleri çıkar.
 
-Tüm ayrıntılar, ekran açıklamaları ve ipuçları için: **[📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md)**
+Tüm ayrıntılar: **[📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md)**
+
+## Önizleme
+
+<img src="docs/img/onizleme.png" alt="Önizleme paneli" width="460" align="right">
+
+- Kutuya **tek bir bağlantı** yapıştırdığınızda bilgiler kendiliğinden gelir: başlık, kanal, süre, görüntülenme, tarih, küçük resim ve videodaki **en yüksek çözünürlük**.
+- **▶** düğmesi videoyu indirmeden uygulama içinde oynatır. **Sadece Ses** seçiliyse yalnızca ses çalınır ("Ses önizlemesi").
+- Oynatma listelerinde listenin adı, öğe sayısı ve ilk öğe gösterilir.
+- Kuyrukta **tamamlanan** bir dosyaya çift tıklayınca o dosya önizlemede oynar.
+- Ses düzeyi, ileri-geri sarma ve durdurma denetimleri vardır.
+
+<br clear="right">
+
+## Otomatik güncelleme
+
+- Uygulama açılırken GitHub'daki son sürümü denetler. Yeni sürüm varsa sağ üstte yeşil **"Yeni sürüm x.y.z"** düğmesi belirir.
+- Düğmeye basınca sürüm notları görünür. **Şimdi güncelle** dediğinizde yeni exe indirilir, **SHA-256 özeti doğrulanır**, uygulama kendini değiştirip yeniden açılır.
+- Sürüyor olan indirmeler kaydedilir ve yeniden açılışta **kaldığı yerden** devam eder.
+- İsterseniz bir sürümü atlayabilir, otomatik denetimi **Ayarlar**'dan kapatıp **Uygulama güncellemesini denetle** ile elle denetleyebilirsiniz.
+- İndirme motoru **yt-dlp** de ayrıca günde bir kez otomatik güncellenir.
 
 ## Desteklenen formatlar
 
@@ -84,50 +111,49 @@ Tüm ayrıntılar, ekran açıklamaları ve ipuçları için: **[📖 Kullanım 
 |---|---|---|
 | Video + Ses | `mp4` (en uyumlu), `mkv`, `webm` | En iyi, 2160p (4K), 1440p, 1080p, 720p, 480p, 360p, 240p |
 | Sadece Ses | `mp3` (en uyumlu), `m4a`, `opus`, `flac`, `wav` | En iyi, 320, 256, 192, 128, 96 kbps |
-| Sadece Video | `mp4`, `mkv`, `webm` (ses yok) | Video ile aynı |
+| Sessiz Video | `mp4`, `mkv`, `webm` (ses yok) | Video ile aynı |
 
-Seçilen çözünürlük bir **üst sınırdır**: video o çözünürlükte yoksa, altındaki en iyi kalite indirilir.
+Seçilen çözünürlük bir **üst sınırdır**: video o çözünürlükte yoksa altındaki en iyi kalite indirilir. Önizleme, videodaki en yüksek çözünürlüğü gösterir.
 
 Desteklenen siteler: YouTube, YouTube Music, Vimeo, Dailymotion, SoundCloud, Twitter/X, Instagram, TikTok, Facebook, Twitch ve [yt-dlp'nin desteklediği 1000'den fazla site](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
 
 ## Kesintiye dayanıklı indirme
-
-Video Müzik İndirici, uzun ve kalabalık indirme listelerinin gece boyunca bile sorunsuz bitmesi için tasarlandı:
 
 | Durum | Uygulamanın davranışı |
 |---|---|
 | İnternet bağlantısı koptu | Satırda **"Bağlantı bekleniyor…"** yazar. Bağlantı gelince yarım dosyadan **kaldığı yerden** devam eder. |
 | İndirme takıldı (veri gelmiyor) | 90 saniye veri gelmezse indirmeyi otomatik yeniden başlatır (yine kaldığı yerden). |
 | Bilgisayar uykuya geçti / uyandı | Uyanınca takılan indirmeleri algılar ve sürdürür. İndirme sırasında otomatik uykuyu engeller. |
-| Uygulama kapatıldı / bilgisayar yeniden başladı | Yarım kalan indirmeler kaydedilir; uygulamayı açtığınızda kendiliğinden devam eder. |
+| Uygulama kapatıldı / güncellendi / bilgisayar yeniden başladı | Yarım kalan indirmeler kaydedilir; uygulama açılınca kendiliğinden devam eder. |
 | Geçici sunucu hatası | Artan bekleme süreleriyle (5 sn → 2 dk) yeniden dener. |
-| Kalıcı hata (video silinmiş, gizli, geçersiz adres) | Boşuna denemez, **Hata** olarak işaretler; sağ tık → *Hata ayrıntısı* ile sebebi görebilirsiniz. |
+| Kalıcı hata (video silinmiş, gizli, geçersiz adres) | Boşuna denemez, **Hata** olarak işaretler; çift tıklayınca sebebi görünür. |
 
 ## Sistem gereksinimleri
 
 - Windows 10 veya Windows 11 (64 bit)
 - İnternet bağlantısı
-- İlk açılış için ~400 MB boş alan (yt-dlp + FFmpeg) ve indirmeleriniz için yeterli disk alanı
+- Uygulama ~55 MB; ilk açılışta yt-dlp + FFmpeg için ~400 MB boş alan
 
 ## Kaynaktan çalıştırma ve derleme
 
-Python 3.9 veya üstü (tkinter dahil) yeterlidir; ek kütüphane gerekmez.
+Python 3.9 veya üstü ve **PySide6** gerekir.
 
 ```bash
 git clone https://github.com/mehmet-cizmeci/video-muzik-indirici.git
 cd video-muzik-indirici
+python -m pip install pyside6
 python indirici.pyw
 ```
 
-Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; sonuç `dist\VideoMuzikIndirici.exe` olur. Kod imzalama sertifikası bağlıysa exe otomatik imzalanır ([Dijital İmza Rehberi](docs/IMZALAMA.md)). Ayrıntılar: [Teknik Bilgi](docs/TEKNIK.md#kaynaktan-derleme).
+Tek dosyalık `.exe` derlemek için `build.bat` dosyasını çalıştırın; sonuç `dist\VideoMuzikIndirici.exe` ve güncelleyicinin doğrulaması için `dist\VideoMuzikIndirici.exe.sha256` olur. Ayrıntılar: [Teknik Bilgi](docs/TEKNIK.md#kaynaktan-derleme).
 
 ## Dokümantasyon
 
 | Belge | İçerik |
 |---|---|
-| [📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md) | Ekranın her bölümü, adım adım indirme, listeler, oynatma listeleri, ipuçları |
-| [❓ Sık Sorulan Sorular ve Sorun Giderme](docs/SSS.md) | Hata mesajları, SmartScreen uyarısı, yavaş indirme, format seçimi |
-| [⚙ Teknik Bilgi](docs/TEKNIK.md) | Nasıl çalışır, dosya konumları, kullanılan yt-dlp ayarları, derleme |
+| [📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md) | Ekranın her bölümü, önizleme, indirme, kuyruk, ayarlar, güncelleme, ipuçları |
+| [❓ Sık Sorulan Sorular ve Sorun Giderme](docs/SSS.md) | Hata mesajları, SmartScreen uyarısı, önizleme ve güncelleme sorunları |
+| [⚙ Teknik Bilgi](docs/TEKNIK.md) | Mimari, dosya konumları, yt-dlp ayarları, güncelleme mekanizması, derleme |
 | [🔏 Dijital İmza Rehberi](docs/IMZALAMA.md) | İmza durumu (exe şu an imzasız) ve ileride imzalama altyapısı |
 | [📝 Değişiklik Günlüğü](CHANGELOG.md) | Sürüm geçmişi |
 
@@ -139,10 +165,9 @@ Bu yazılım yalnızca **kişisel kullanım** ve **indirme hakkına sahip olduğ
 
 Bu proje [MIT Lisansı](LICENSE) ile yayınlanmıştır.
 
-Asıl işi yapan harika açık kaynak projelere teşekkürler:
-
 - **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** — video/ses indirme motoru (Unlicense)
 - **[FFmpeg](https://ffmpeg.org/)** — birleştirme ve dönüştürme ([yt-dlp/FFmpeg-Builds](https://github.com/yt-dlp/FFmpeg-Builds), GPL)
+- **[Qt / PySide6](https://www.qt.io/qt-for-python)** — arayüz ve oynatıcı (LGPL)
 - **[PyInstaller](https://pyinstaller.org/)** — tek dosyalık exe paketleme
 
 yt-dlp ve FFmpeg bu depoda **bulunmaz**; uygulama ihtiyaç duyduğunda bunları kendi resmi sürüm sayfalarından indirir.

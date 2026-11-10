@@ -25,6 +25,19 @@
 - [İndirme çok yavaş](#i̇ndirme-çok-yavaş)
 - [Yaş sınırlı veya üyelere özel videolar inmiyor](#yaş-sınırlı-veya-üyelere-özel-videolar-inmiyor)
 
+**Önizleme**
+- [Önizleme bilgileri gelmiyor](#önizleme-bilgileri-gelmiyor)
+- [▶'ye basınca oynatmıyor veya "Oynatılamadı" diyor](#ye-basınca-oynatmıyor-veya-oynatılamadı-diyor)
+- [Önizlemenin kalitesi düşük](#önizlemenin-kalitesi-düşük)
+
+**Uygulama güncellemesi**
+- [Yeni sürüm düğmesi hiç çıkmıyor](#yeni-sürüm-düğmesi-hiç-çıkmıyor)
+- ["Uygulama klasörüne yazılamıyor" hatası](#uygulama-klasörüne-yazılamıyor-hatası)
+- [Güncelleme yarıda kesildi, uygulama açılmıyor](#güncelleme-yarıda-kesildi-uygulama-açılmıyor)
+- [1.0.0 sürümünden nasıl geçerim?](#100-sürümünden-nasıl-geçerim)
+- [Exe neden eskisinden büyük?](#exe-neden-eskisinden-büyük)
+- [İkonlar farklı / kare kutu görünüyor](#i̇konlar-farklı--kare-kutu-görünüyor)
+
 **Dosyalar ve kalite**
 - [Seçtiğim çözünürlükte inmedi](#seçtiğim-çözünürlükte-inmedi)
 - [Videonun sesi yok](#videonun-sesi-yok)
@@ -44,9 +57,9 @@
 
 ### Ücretsiz mi? Reklam veya virüs var mı?
 
-Evet, tamamen ücretsiz ve açık kaynaklıdır ([MIT lisansı](../LICENSE)). Reklam, izleme, veri toplama yoktur. Kaynak kodun tamamı bu depoda (`indirici.pyw`) okunabilir; isterseniz exe'yi kendiniz [derleyebilirsiniz](TEKNIK.md#kaynaktan-derleme).
+Evet, tamamen ücretsiz ve açık kaynaklıdır ([MIT lisansı](../LICENSE)). Reklam, izleme, veri toplama yoktur. Kaynak kodun tamamı bu depoda (`core.py`, `ui_qt.py`) okunabilir; isterseniz exe'yi kendiniz [derleyebilirsiniz](TEKNIK.md#kaynaktan-derleme).
 
-Uygulamanın internete bağlandığı yerler yalnızca şunlardır: indirdiğiniz video siteleri, yt-dlp/FFmpeg'in resmi GitHub sürüm sayfaları (kurulum ve güncelleme için) ve bağlantı kontrolü için `1.1.1.1` / `8.8.8.8` adreslerine kısa bir bağlantı denemesi.
+Uygulamanın internete bağlandığı yerler yalnızca şunlardır: indirdiğiniz ve önizlediğiniz video siteleri, yt-dlp/FFmpeg'in resmi GitHub sürüm sayfaları (kurulum ve güncelleme için), bu deponun GitHub sürüm bilgisi (`api.github.com`, uygulama güncellemesi için) ve bağlantı kontrolü için `1.1.1.1` / `8.8.8.8` adreslerine kısa bir bağlantı denemesi.
 
 ### Hangi sitelerden indirebilirim?
 
@@ -58,7 +71,7 @@ Bu, içeriğe ve bulunduğunuz ülkenin yasalarına bağlıdır. Kendi videolar�
 
 ### Mac veya Linux'ta çalışır mı?
 
-Hazır exe yalnızca Windows içindir. Kaynak kod Python/Tkinter ile yazıldığı için büyük ölçüde taşınabilirdir; ancak otomatik kurulum, uyku engelleme gibi bazı özellikler Windows'a özgüdür ve diğer sistemlerde test edilmemiştir.
+Hazır exe yalnızca Windows içindir. Kaynak kod Python ve Qt (PySide6) ile yazıldığı için büyük ölçüde taşınabilirdir; ancak otomatik kurulum, uyku engelleme gibi bazı özellikler Windows'a özgüdür ve diğer sistemlerde test edilmemiştir.
 
 ---
 
@@ -82,7 +95,7 @@ PyInstaller ile paketlenmiş Python programları bazı antivirüs yazılımları
 
 - Dosyayı [VirusTotal](https://www.virustotal.com/)'da taratın.
 - Antivirüs programınızda dosya için istisna tanımlayın.
-- En güvenli yol: exe'yi kaynak koddan [kendiniz derleyin](TEKNIK.md#kaynaktan-derleme) ya da doğrudan `python indirici.pyw` ile çalıştırın.
+- En güvenli yol: exe'yi kaynak koddan [kendiniz derleyin](TEKNIK.md#kaynaktan-derleme) ya da PySide6 kurup doğrudan `python indirici.pyw` ile çalıştırın.
 
 ### İlk açılışta "araç kurulumu başarısız" hatası
 
@@ -160,6 +173,63 @@ Bu videolar oturum açmayı gerektirir. Video Müzik İndirici şu an hesap/çer
 
 ---
 
+## Önizleme
+
+### Önizleme bilgileri gelmiyor
+
+- Bilgiler, kutuda **tek bir bağlantı** varken kendiliğinden gelir. Birden fazla bağlantı varsa **Önizle** düğmesine basın (ilk bağlantı gösterilir).
+- Panelde "Önizleme alınamadı" ve altında bir mesaj yazıyorsa sebep çoğunlukla indirmedeki gibidir: video silinmiş/gizli, bağlantı hatalı veya yt-dlp eski. **Ayarlar → yt-dlp'yi güncelle** ile güncelleyip tekrar deneyin.
+- Bazı siteler küçük resim vermez; bu durumda yalnızca başlık ve bilgiler görünür.
+
+### ▶'ye basınca oynatmıyor veya "Oynatılamadı" diyor
+
+- Önizleme internetten akış olarak oynar; bağlantınızı kontrol edin.
+- Akış adresleri birkaç saat geçerlidir. Uzun süre bekledikten sonra oynamazsa **Önizle**'ye yeniden basın.
+- Bazı siteler (veya yaş/üyelik gerektiren videolar) doğrudan oynatılabilir akış vermez. Bu durumda önizleme yapılamaz ama indirme genellikle yine çalışır.
+- Ses gelmiyorsa ses simgesinin kapalı (🔇) olmadığına ve ses çubuğunun açık olduğuna bakın.
+
+### Önizlemenin kalitesi düşük
+
+Önizleme hızlı başlasın ve az veri harcasın diye en fazla ~480p akış kullanır. **İndirilen dosya seçtiğiniz kalitede olur**; indirme bitince satıra çift tıklayarak gerçek kaliteyi uygulama içinde izleyebilirsiniz.
+
+---
+
+## Uygulama güncellemesi
+
+### Yeni sürüm düğmesi hiç çıkmıyor
+
+- Zaten en güncel sürümü kullanıyor olabilirsiniz: **Ayarlar → Uygulama güncellemesini denetle** ile kontrol edin.
+- **Ayarlar → Açılışta uygulamanın yeni sürümünü denetle** kapalı olabilir.
+- Bir sürüm için **Bu sürümü atla** dediyseniz o sürüm için düğme gösterilmez (elle denetlediğinizde yine görünür).
+- Kaynaktan (`python indirici.pyw`) çalıştırıyorsanız güncelleme, exe'yi değiştirmek yerine sürüm sayfasını açar.
+
+### "Uygulama klasörüne yazılamıyor" hatası
+
+Güncelleyici yeni exe'yi mevcut exe'nin yanına indirip yerini değiştirir. Exe `C:\Program Files` gibi yazma izniniz olmayan bir klasördeyse bu yapılamaz. Exe'yi **Belgeler** veya **Masaüstü** gibi bir klasöre taşıyın ya da yeni sürümü sürüm sayfasından elle indirin.
+
+### Güncelleme yarıda kesildi, uygulama açılmıyor
+
+Güncelleyici, indirilen dosyayı boyut ve SHA-256 özetiyle doğrulamadan eskisinin yerine koymaz; eksik veya bozuk indirme uygulanmaz. Yine de bir sorun olursa:
+
+1. Exe'nin bulunduğu klasörde `VideoMuzikIndirici.exe.old` dosyası varsa, bu önceki sürümdür. Adını `VideoMuzikIndirici.exe` yapın.
+2. Ya da son sürümü [Releases](https://github.com/mehmet-cizmeci/video-muzik-indirici/releases/latest) sayfasından yeniden indirin.
+
+Ayarlarınız ve yarım kalan indirmeleriniz `%APPDATA%\VideoMuzikIndirici` klasöründe durduğu için kaybolmaz.
+
+### 1.0.0 sürümünden nasıl geçerim?
+
+1.0.0 kendini güncelleyemez. 2.0.0'ı bir kez [Releases](https://github.com/mehmet-cizmeci/video-muzik-indirici/releases/latest) sayfasından indirip eski exe'nin yerine koyun. Ayarlarınız (klasör, format, kalite) ve yarım kalan indirmeleriniz korunur. Bundan sonraki sürümler uygulama içinden gelir.
+
+### Exe neden eskisinden büyük?
+
+2.0 sürümü modern arayüz ve **yerleşik video/ses oynatıcı** için Qt kütüphanelerini içerir; bu yüzden exe ~10 MB'tan ~55 MB'a çıktı. yt-dlp ve FFmpeg hâlâ exe'nin içinde değildir, ilk açılışta ayrıca indirilir.
+
+### İkonlar farklı / kare kutu görünüyor
+
+Uygulama ikonları Windows'un yerleşik ikon yazı tipiyle çizilir (Windows 11'de *Segoe Fluent Icons*, Windows 10'da *Segoe MDL2 Assets*). Windows 10'da bazı ikonlar biraz farklı görünebilir. Kare kutular görünüyorsa Windows güncellemelerini yükleyin.
+
+---
+
 ## Dosyalar ve kalite
 
 ### Seçtiğim çözünürlükte inmedi
@@ -180,7 +250,7 @@ Formatı **mp4** seçin. mkv ve webm dosyaları bazı cihazlarda desteklenmez. 4
 
 ### İndirilen dosyalar nerede?
 
-Varsayılan olarak `C:\Users\<kullanıcı adınız>\Downloads\Video Muzik Indirici` klasöründe. Hızlı ulaşmak için **Klasörü aç** düğmesine basın veya biten satıra çift tıklayın. Oynatma listeleri bu klasörün içinde, liste adını taşıyan alt klasörlere iner.
+Varsayılan olarak `C:\Users\<kullanıcı adınız>\Downloads\Video Muzik Indirici` klasöründe. Hızlı ulaşmak için indirme yeri satırındaki **Aç** düğmesine basın veya biten satıra sağ tıklayıp **Klasörde göster**'i seçin. Oynatma listeleri bu klasörün içinde, liste adını taşıyan alt klasörlere iner.
 
 ### Klasörde .part veya .ytdl uzantılı dosyalar var
 
