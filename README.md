@@ -33,6 +33,7 @@
 - [Önizleme](#önizleme)
 - [Otomatik güncelleme](#otomatik-güncelleme)
 - [Desteklenen formatlar](#desteklenen-formatlar)
+- [Android uyumluluğu ve MP4 dönüştürücü](#android-uyumluluğu-ve-mp4-dönüştürücü)
 - [Kesintiye dayanıklı indirme](#kesintiye-dayanıklı-indirme)
 - [Sistem gereksinimleri](#sistem-gereksinimleri)
 - [Kaynaktan çalıştırma ve derleme](#kaynaktan-çalıştırma-ve-derleme)
@@ -49,6 +50,8 @@
 | 🔄 **Kendini güncelleyen uygulama** | Yeni sürüm çıkınca haber verir; tek tıkla indirir, doğrular ve yeniden başlar. İndirmeler kaldığı yerden sürer. |
 | 🔗 **Tek URL veya liste** | Tek bir bağlantı, her satıra bir bağlantı, `.txt` dosyasından liste ya da tarayıcıdan **sürükle-bırak**. |
 | 🎬 **Üç indirme türü** | Video + Ses, Sadece Ses (müzik), Sessiz Video. |
+| 📱 **Her cihazda görüntülü** | Varsayılan **Android uyumlu** mod: H.264 MP4, 30 fps. Telefon, tablet ve TV'de "ses var, görüntü yok" sorunu yaşanmaz. Bozuk dosya adları otomatik düzeltilir. |
+| 🔁 **MP4 Dönüştürücü** | Bilgisayardaki videoları (mkv, webm, avi, mov…) tek tıkla uyumlu MP4'e çevirir; orijinallere dokunmaz. |
 | 🎚 **Format ve kalite** | Video: mp4, mkv, webm — 4K'dan 240p'ye. Ses: mp3, m4a, opus, flac, wav — 320 kbps'ye kadar. |
 | ⏳ **Arka planda kuyruk** | İndirmeler sırayla ve arka planda yürür; aynı anda 1–5 indirme. İlerleme çubukları, hız ve kalan süre. |
 | 📶 **Kesintiye dayanıklı** | İnternet koparsa bekler, gelince **kaldığı yerden** devam eder; uyku sonrası takılan indirmeleri kendisi yeniden başlatır. |
@@ -116,6 +119,20 @@ Tüm ayrıntılar: **[📖 Kullanım Kılavuzu](docs/KULLANIM-KILAVUZU.md)**
 Seçilen çözünürlük bir **üst sınırdır**: video o çözünürlükte yoksa altındaki en iyi kalite indirilir. Önizleme, videodaki en yüksek çözünürlüğü gösterir.
 
 Desteklenen siteler: YouTube, YouTube Music, Vimeo, Dailymotion, SoundCloud, Twitter/X, Instagram, TikTok, Facebook, Twitch ve [yt-dlp'nin desteklediği 1000'den fazla site](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md).
+
+## Android uyumluluğu ve MP4 dönüştürücü
+
+YouTube artık birçok videoyu **AV1** biçiminde veriyor. Android 9 ve öncesi bu biçimi oynatamaz; eski veya düşük güçlü cihazlar da **1080p / 60 fps** videolarda görüntüyü gösteremeyebilir. Sonuç: **ses gelir, görüntü gelmez.** Emojili veya `｜ ⧸ ：` gibi karakterli dosya adları da bazı telefonlarda dosyanın (hatta klasörün) görünmemesine yol açar.
+
+| Seçenek | Varsayılan | Açıklama |
+|---|---|---|
+| **Uyumluluk** | Android uyumlu (H.264) | H.264 + AAC MP4 indirilir; gelen video yine de uyumsuzsa indirme sonunda otomatik dönüştürülür. *Orijinal* seçilirse sitenin en iyi biçimi (AV1/VP9 olabilir) iner. |
+| **Kare hızı (FPS)** | 30 fps | 25 fps, Orijinal veya 60 fps de seçilebilir. 25/30 fps her cihazda akıcıdır. |
+| **Adları düzelt** | Açık | Emoji, garip karakterler ve sondaki `[video kimliği]` dosya adından temizlenir. |
+
+**MP4 Dönüştürücü** (üst çubuktaki düğme) aynı işlemi bilgisayardaki videolara uygular: dosya veya klasör ekleyin (ya da sürükleyin), çözünürlük (720p önerilir) ve FPS sınırını seçin, **Dönüştür**'e basın. Zaten uyumlu olan videolar kalite kaybı olmadan kopyalanır. Orijinal dosyalara dokunulmaz; çıktılar varsayılan olarak videonun yanındaki **`Android uyumlu`** klasörüne yazılır.
+
+Dönüştürme ayarları: H.264 (Main profil), en fazla seçilen çözünürlük ve FPS, AAC ses, hızlı başlatma (`+faststart`).
 
 ## Kesintiye dayanıklı indirme
 

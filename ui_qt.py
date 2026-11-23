@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QButtonGroup, QC
                                QTableWidget, QTableWidgetItem, QTextBrowser, QToolButton, QVBoxLayout, QWidget)
 
 import core
-from core import (APP_NAME, APP_URL, APP_VERSION, AUDIO_FORMATS, AUDIO_QUALITIES, BIN_DIR, CONFIG_DIR, DEFAULT_DIR,
-                  DEFAULTS, FINAL, FROZEN, LOG_FILE, QUEUE_FILE, RESOLUTIONS, TYPES, UPDATE_INTERVAL,
+from core import (APP_NAME, APP_URL, APP_VERSION, AUDIO_FORMATS, AUDIO_QUALITIES, BIN_DIR, COMPAT_MODES, CONFIG_DIR,
+                  CONVERT_RESOLUTIONS, DEFAULT_DIR, DEFAULTS, FPS_OPTIONS, FINAL, FROZEN, LOG_FILE, QUEUE_FILE, RESOLUTIONS, TYPES, UPDATE_INTERVAL,
                   VIDEO_FORMATS, Downloader, Job, find_exe, load_settings, parse_urls, save_settings)
 
 RES_DIR = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -42,7 +42,7 @@ G = dict(download=0xE896, play=0xE768, pause=0xE769, stop=0xE71A, cancel=0xE711,
          info=0xE946, check=0xE73E, error=0xE783, audio=0xE8D6, video=0xE714, silent=0xE786, search=0xE721,
          file=0xE8E5, volume=0xE767, mute=0xE74F, list=0xE8F1, clear=0xE894, copy=0xE8C8, warning=0xE7BA,
          moon=0xE708, sun=0xE706, cloud=0xEBD3, help=0xE9CE, chevron=0xE70D, link=0xE71B, view=0xE890,
-         history=0xE81C, page=0xE8A5, globe=0xE774)
+         history=0xE81C, page=0xE8A5, globe=0xE774, convert=0xE8AB, add=0xE710)
 
 ICON_FONT = "Segoe MDL2 Assets"
 
@@ -56,7 +56,7 @@ def _status_color(t, status):
         return t["muted"]
     if status in ("Bağlantı bekleniyor…", "Yeniden denenecek"):
         return t["warn"]
-    if status == "İşleniyor":
+    if status.startswith(("İşleniyor", "Dönüştürülüyor", "İnceleniyor", "Kopyalanıyor")):
         return t["accent2"]
     if status == "İndiriliyor" or status.startswith("Devam"):
         return t["accent"]
@@ -299,7 +299,7 @@ class ProgressDelegate(QStyledItemDelegate):
         p.drawRoundedRect(r, 4, 4)
         if val is not None:
             w = r.width() * max(0.0, min(100.0, val)) / 100
-            p.setBrush(QColor(_status_color(t, status) if status in FINAL or status == "İşleniyor" else t["accent"]))
+            p.setBrush(QColor(_status_color(t, status) if status in FINAL or status.startswith(("İşleniyor", "Dönüştürülüyor")) else t["accent"]))
             p.drawRoundedRect(QRectF(r.x(), r.y(), w, r.height()), 4, 4)
             p.setPen(QColor(t["muted"]))
             f = p.font()
@@ -530,6 +530,382 @@ class SettingsDialog(QDialog):
         super().accept()
 
 
+class ConverterDialog(QDialog):
+    """Bilgisayardaki videoları Android / TV uyumlu MP4'e (H.264 + AAC) çevirir. Orijinallere dokunmaz."""
+    COLS = ["Dosya", "Durum", "İlerleme", "Ayrıntı"]
+
+    def __init__(self, win):
+        super().__init__(win)
+        self.win = win
+        t = win.t
+        s = win.s
+        self.events = queue.Queue()
+        self.conv = core.Converter(win.ffmpeg, self.events)
+        self.jobs = {}       # id -> ConvJob
+        self.rows = {}       # id -> QTableWidgetItem
+        self.ready = []      # henüz başlatılmamış dosyalar (ConvJob, status "Hazır")
+        self.setWindowTitle("MP4 Dönüştürücü")
+        self.setWindowFlag(Qt.WindowMaximizeButtonHint, True)
+        self.resize(940, 620)
+        self.setAcceptDrops(True)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(18, 16, 18, 16)
+        lay.setSpacing(12)
+
+        intro = QLabel("Videoları her telefon, tablet ve TV'de <b>görüntülü</b> oynayan MP4 biçimine (H.264 + AAC) "
+                       "çevirir. AV1 / VP9 / H.265, 60 fps veya yüksek çözünürlüklü videolar küçültülür. "
+                       "<b>Orijinal dosyalara dokunulmaz</b>; çıktılar ayrı klasöre yazılır. "
+                       "Dosya veya klasörleri bu pencereye sürükleyip bırakabilirsiniz.")
+        intro.setWordWrap(True)
+        intro.setObjectName("muted")
+        lay.addWidget(intro)
+
+        opt = Card("Dönüştürme seçenekleri", G["settings"])
+        opt.retheme(t)
+        g = QGridLayout()
+        g.setHorizontalSpacing(12)
+        g.setVerticalSpacing(6)
+        for col, txt in enumerate(("Çözünürlük (en fazla)", "Kare hızı (FPS)")):
+            lb = QLabel(txt)
+            lb.setObjectName("muted")
+            g.addWidget(lb, 0, col)
+        self.cb_res = QComboBox()
+        self.cb_res.addItems(CONVERT_RESOLUTIONS)
+        self.cb_res.setCurrentText(s.get("conv_res") if s.get("conv_res") in CONVERT_RESOLUTIONS
+                                   else CONVERT_RESOLUTIONS[0])
+        self.cb_res.setToolTip("720p eski ve düşük güçlü cihazlar dahil her yerde oynar. "
+                               "Küçük videolar büyütülmez.")
+        self.cb_fps = QComboBox()
+        self.cb_fps.addItems(FPS_OPTIONS)
+        self.cb_fps.setCurrentText(s.get("conv_fps") if s.get("conv_fps") in FPS_OPTIONS else FPS_OPTIONS[0])
+        g.addWidget(self.cb_res, 1, 0)
+        g.addWidget(self.cb_fps, 1, 1)
+        g.setColumnStretch(0, 1)
+        g.setColumnStretch(1, 1)
+        opt.lay.addLayout(g)
+        chk = QHBoxLayout()
+        chk.setSpacing(18)
+        self.chk_clean = QCheckBox("Dosya adlarını düzelt")
+        self.chk_clean.setToolTip("Emoji, ｜ ⧸ ： gibi karakterler ve sondaki [video kimliği] çıktı adından temizlenir")
+        self.chk_clean.setChecked(bool(s.get("conv_clean", True)))
+        self.chk_copy = QCheckBox("Zaten uyumlu olanları dönüştürmeden kopyala")
+        self.chk_copy.setToolTip("Kalite kaybı olmaz ve çok hızlıdır")
+        self.chk_copy.setChecked(bool(s.get("conv_copy_ok", True)))
+        chk.addWidget(self.chk_clean)
+        chk.addWidget(self.chk_copy)
+        chk.addStretch(1)
+        opt.lay.addLayout(chk)
+        fr = QHBoxLayout()
+        fr.setSpacing(8)
+        lb = QLabel("Çıktı klasörü")
+        lb.setObjectName("muted")
+        fr.addWidget(lb)
+        self.out_edit = QLineEdit(s.get("conv_out") or "")
+        self.out_edit.setPlaceholderText(f"Her videonun yanında \"{core.CONV_SUBDIR}\" klasörü")
+        fr.addWidget(self.out_edit, 1)
+        b_out = QPushButton(" Gözat")
+        b_out.setIcon(glyph_icon(G["folder_open"], t["text"]))
+        b_out.clicked.connect(self._browse_out)
+        b_def = QPushButton("")
+        b_def.setIcon(glyph_icon(G["refresh"], t["text"]))
+        b_def.setToolTip("Varsayılan (videonun yanında)")
+        b_def.clicked.connect(lambda: self.out_edit.clear())
+        fr.addWidget(b_out)
+        fr.addWidget(b_def)
+        opt.lay.addLayout(fr)
+        lay.addWidget(opt)
+
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        b_files = QPushButton(" Dosya ekle")
+        b_files.setIcon(glyph_icon(G["add"], t["text"]))
+        b_files.clicked.connect(self._add_files)
+        b_dir = QPushButton(" Klasör ekle")
+        b_dir.setIcon(glyph_icon(G["folder"], t["text"]))
+        b_dir.clicked.connect(self._add_folder)
+        row.addWidget(b_files)
+        row.addWidget(b_dir)
+        row.addStretch(1)
+        self.count_lbl = QLabel("")
+        self.count_lbl.setObjectName("muted")
+        row.addWidget(self.count_lbl)
+        lay.addLayout(row)
+
+        self.table = QTableWidget(0, len(self.COLS))
+        self.table.setHorizontalHeaderLabels(self.COLS)
+        self.table.verticalHeader().hide()
+        self.table.setShowGrid(False)
+        self.table.setAlternatingRowColors(True)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setWordWrap(False)
+        self.table.verticalHeader().setDefaultSectionSize(34)
+        hh = self.table.horizontalHeader()
+        hh.setSectionResizeMode(0, QHeaderView.Stretch)
+        hh.setSectionResizeMode(1, QHeaderView.Interactive)
+        hh.setSectionResizeMode(2, QHeaderView.Interactive)
+        hh.setSectionResizeMode(3, QHeaderView.Interactive)
+        self.table.setColumnWidth(1, 150)
+        self.table.setColumnWidth(2, 150)
+        self.table.setColumnWidth(3, 260)
+        self.table.setItemDelegateForColumn(2, ProgressDelegate(win))
+        self.table.cellDoubleClicked.connect(self._on_double)
+        lay.addWidget(self.table, 1)
+        self.empty = QLabel("Henüz dosya yok — dosya veya klasör ekleyin ya da buraya sürükleyin.")
+        self.empty.setAlignment(Qt.AlignCenter)
+        self.empty.setObjectName("muted")
+        lay.addWidget(self.empty, 1)
+
+        bot = QHBoxLayout()
+        self.b_cancel = QPushButton(" Seçilenleri iptal et")
+        self.b_cancel.setIcon(glyph_icon(G["cancel"], t["text"]))
+        self.b_cancel.clicked.connect(self._cancel_selected)
+        b_clear = QPushButton(" Listeyi temizle")
+        b_clear.setIcon(glyph_icon(G["clear"], t["text"]))
+        b_clear.setToolTip("Biten, iptal edilen ve başlatılmamış dosyaları listeden kaldırır")
+        b_clear.clicked.connect(self._clear_finished)
+        self.b_open = QPushButton(" Çıktı klasörünü aç")
+        self.b_open.setIcon(glyph_icon(G["folder_open"], t["text"]))
+        self.b_open.clicked.connect(self._open_out)
+        self.b_go = QPushButton("  Dönüştür")
+        self.b_go.setObjectName("primary")
+        self.b_go.setIcon(glyph_icon(G["convert"], "white"))
+        self.b_go.clicked.connect(self._start)
+        bot.addWidget(self.b_cancel)
+        bot.addWidget(b_clear)
+        bot.addWidget(self.b_open)
+        bot.addStretch(1)
+        bot.addWidget(self.b_go)
+        lay.addLayout(bot)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._poll)
+        self.timer.start(150)
+        self._refresh_state()
+
+    # ---- dosya ekleme
+    def _add_paths(self, paths):
+        files = core.collect_videos(paths)
+        known = {os.path.normcase(os.path.abspath(j.src)) for j in self.jobs.values()
+                 if j.status not in ("Tamamlandı", "Hata", "İptal edildi")}
+        added = 0
+        for f in files:
+            if os.path.normcase(os.path.abspath(f)) in known:
+                continue
+            # kendi çıktı klasörümüzdeki dosyaları tekrar eklemeyelim
+            if os.path.basename(os.path.dirname(f)) == core.CONV_SUBDIR and not self.out_edit.text().strip():
+                continue
+            j = core.ConvJob(f, {})
+            j.status = "Hazır"
+            self.jobs[j.id] = j
+            self.ready.append(j)
+            self._add_row(j)
+            added += 1
+        if paths and not added:
+            self.win.toast("Eklenecek yeni video bulunamadı")
+        self._refresh_state()
+
+    def _add_files(self):
+        exts = " ".join("*" + e for e in core.VIDEO_EXT)
+        paths, _ = QFileDialog.getOpenFileNames(self, "Video seç", self._start_dir(),
+                                                f"Videolar ({exts});;Tüm dosyalar (*.*)")
+        self._add_paths(paths)
+
+    def _add_folder(self):
+        d = QFileDialog.getExistingDirectory(self, "Video klasörü seç", self._start_dir())
+        if d:
+            self._add_paths([os.path.normpath(d)])
+
+    def _start_dir(self):
+        f = self.win._folder()
+        return f if os.path.isdir(f) else os.path.expanduser("~")
+
+    def _browse_out(self):
+        d = QFileDialog.getExistingDirectory(self, "Çıktı klasörü seç", self.out_edit.text() or self._start_dir())
+        if d:
+            self.out_edit.setText(os.path.normpath(d))
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls():
+            e.acceptProposedAction()
+
+    def dropEvent(self, e):
+        self._add_paths([u.toLocalFile() for u in e.mimeData().urls() if u.isLocalFile()])
+
+    # ---- tablo
+    def _add_row(self, j):
+        r = self.table.rowCount()
+        self.table.insertRow(r)
+        it = QTableWidgetItem(os.path.basename(j.src))
+        it.setData(Qt.UserRole, j.id)
+        it.setToolTip(j.src)
+        self.table.setItem(r, 0, it)
+        for col in range(1, len(self.COLS)):
+            self.table.setItem(r, col, QTableWidgetItem(""))
+        self.rows[j.id] = it
+        self._refresh_row(j)
+
+    def _refresh_row(self, j):
+        it = self.rows.get(j.id)
+        if it is None:
+            return
+        t = self.win.t
+        r = it.row()
+        it.setIcon(glyph_icon(G["video"], t["muted"], 16))
+        st = self.table.item(r, 1)
+        st.setText({"Hata": "Hata — çift tıklayın"}.get(j.status, j.status))
+        color = _status_color(t, j.status)
+        st.setForeground(QColor(color))
+        glyph = {"Tamamlandı": G["check"], "Hata": G["error"], "İptal edildi": G["cancel"],
+                 "Dönüştürülüyor": G["convert"], "Kopyalanıyor": G["copy"]}.get(j.status, G["history"])
+        st.setIcon(glyph_icon(glyph, color, 14))
+        try:
+            val = float(j.percent.rstrip("%")) if j.percent else None
+        except ValueError:
+            val = None
+        pr = self.table.item(r, 2)
+        pr.setData(Qt.UserRole, 100.0 if j.status == "Tamamlandı" else val)
+        pr.setData(Qt.UserRole + 1, j.status)
+        info = self.table.item(r, 3)
+        info.setText(j.error if j.status == "Hata" else j.info)
+        info.setToolTip((j.error or j.info) + (f"\n→ {j.dst}" if j.dst else ""))
+        info.setForeground(QColor(t["err"] if j.status == "Hata" else t["muted"]))
+
+    def _job_at(self, row):
+        it = self.table.item(row, 0)
+        return self.jobs.get(it.data(Qt.UserRole)) if it else None
+
+    def _on_double(self, row, _col):
+        j = self._job_at(row)
+        if not j:
+            return
+        if j.status == "Hata":
+            QMessageBox.warning(self, "Dönüştürme hatası", f"{j.src}\n\n{j.error}")
+        elif j.dst and os.path.exists(j.dst):
+            subprocess.Popen(["explorer", "/select,", os.path.normpath(j.dst)])
+        elif os.path.exists(j.src):
+            subprocess.Popen(["explorer", "/select,", os.path.normpath(j.src)])
+
+    # ---- işlemler
+    def _opts(self):
+        self.win.s.update(conv_res=self.cb_res.currentText(), conv_fps=self.cb_fps.currentText(),
+                          conv_clean=self.chk_clean.isChecked(), conv_copy_ok=self.chk_copy.isChecked(),
+                          conv_out=self.out_edit.text().strip())
+        save_settings(self.win.s)
+        return {k: self.win.s[k] for k in ("conv_res", "conv_fps", "conv_clean", "conv_copy_ok", "conv_out")}
+
+    def _start(self):
+        if not self.ready:
+            self.win.toast("Önce dosya ekleyin")
+            return
+        out = self.out_edit.text().strip()
+        if out:
+            try:
+                os.makedirs(out, exist_ok=True)
+            except OSError as e:
+                QMessageBox.warning(self, "MP4 Dönüştürücü", f"Çıktı klasörü oluşturulamadı:\n{e}")
+                return
+        opts = self._opts()
+        self.conv.ffmpeg = self.win.ffmpeg
+        for j in self.ready:
+            j.opts = dict(opts)
+            j.status = "Bekliyor"
+            self.conv.add(j)
+        self.ready = []
+        self._refresh_state()
+
+    def _cancel_selected(self):
+        rows = sorted({i.row() for i in self.table.selectedItems()})
+        for r in rows:
+            j = self._job_at(r)
+            if not j or j.status in ("Tamamlandı", "Hata", "İptal edildi"):
+                continue
+            if j in self.ready:
+                self.ready.remove(j)
+                j.status = "İptal edildi"
+                self._refresh_row(j)
+            else:
+                self.conv.cancel(j)
+        self._refresh_state()
+
+    def cancel_all(self):
+        for j in list(self.jobs.values()):
+            if j.status not in ("Tamamlandı", "Hata", "İptal edildi", "Hazır"):
+                self.conv.cancel(j)
+
+    def _clear_finished(self):
+        for r in range(self.table.rowCount() - 1, -1, -1):
+            j = self._job_at(r)
+            if j and j.status in ("Tamamlandı", "Hata", "İptal edildi", "Hazır"):
+                self.table.removeRow(r)
+                self.rows.pop(j.id, None)
+                self.jobs.pop(j.id, None)
+                if j in self.ready:
+                    self.ready.remove(j)
+        self._refresh_state()
+
+    def _open_out(self):
+        out = self.out_edit.text().strip()
+        if not out:
+            done = [j for j in self.jobs.values() if j.dst]
+            src = done[-1].dst if done else (next(iter(self.jobs.values())).src if self.jobs else None)
+            if not src:
+                self.win.toast("Henüz çıktı yok")
+                return
+            out = os.path.dirname(src) if done else os.path.join(os.path.dirname(src), core.CONV_SUBDIR)
+        if os.path.isdir(out):
+            os.startfile(out)
+        else:
+            self.win.toast("Çıktı klasörü henüz oluşmadı")
+
+    def _poll(self):
+        changed, finished = set(), False
+        try:
+            for _ in range(300):
+                kind, j = self.events.get_nowait()
+                changed.add(j.id)
+                finished = finished or kind == "conv_done"
+        except queue.Empty:
+            pass
+        for jid in changed:
+            if jid in self.jobs:
+                self._refresh_row(self.jobs[jid])
+        if changed:
+            self._refresh_state()
+        if finished and self.conv.active_count() == 0:
+            vals = list(self.jobs.values())
+            ok = sum(1 for j in vals if j.status == "Tamamlandı")
+            err = sum(1 for j in vals if j.status == "Hata")
+            self.win.toast(f"Dönüştürme bitti — {ok} başarılı" + (f", {err} hatalı" if err else ""))
+            QApplication.alert(self)
+
+    def _refresh_state(self):
+        vals = list(self.jobs.values())
+        n = len(vals)
+        active = self.conv.active_count()
+        done = sum(1 for j in vals if j.status == "Tamamlandı")
+        self.table.setVisible(n > 0)
+        self.empty.setVisible(n == 0)
+        parts = []
+        if self.ready:
+            parts.append(f"{len(self.ready)} hazır")
+        if active:
+            parts.append(f"{active} sürüyor/bekliyor")
+        if done:
+            parts.append(f"{done} tamamlandı")
+        self.count_lbl.setText("  ·  ".join(parts))
+        self.b_go.setEnabled(bool(self.ready))
+        self.b_go.setText(f"  Dönüştür ({len(self.ready)})" if self.ready else "  Dönüştür")
+        self.setWindowTitle(f"MP4 Dönüştürücü ({active})" if active else "MP4 Dönüştürücü")
+
+    def reject(self):   # pencere kapanınca dönüştürme arka planda sürer
+        self.hide()
+
+    def closeEvent(self, e):
+        e.ignore()
+        self.hide()
+
+
 # ----------------------------------------------------------------- ana pencere
 class MainWindow(QMainWindow):
     COLS = ["Başlık", "Durum", "İlerleme", "Hız", "Kalan", "Tür"]
@@ -555,6 +931,7 @@ class MainWindow(QMainWindow):
         self._restored = False
         self._install_dlg = None
         self._update_dlg = None
+        self._conv_dlg = None
 
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
         self.setWindowIcon(QIcon(os.path.join(RES_DIR, "indirici.ico")))
@@ -638,6 +1015,9 @@ class MainWindow(QMainWindow):
         self.update_btn.hide()
         self._icon_widgets.append((self.update_btn, G["cloud"], "ok", 16))
         head.addWidget(self.update_btn)
+        self.conv_btn = self._btn("MP4 Dönüştürücü", G["convert"], self._open_converter)
+        self.conv_btn.setToolTip("Bilgisayardaki videoları Android / TV uyumlu MP4'e (H.264) çevir")
+        head.addWidget(self.conv_btn)
         self.theme_btn = self._icon_btn(G["moon"], "Açık / koyu tema", self._toggle_theme, 20)
         head.addWidget(self.theme_btn)
         head.addWidget(self._icon_btn(G["help"], "Kullanım kılavuzu",
@@ -758,6 +1138,25 @@ class MainWindow(QMainWindow):
         g.addWidget(self.cb_q, 1, 1)
         g.setColumnStretch(0, 1)
         g.setColumnStretch(1, 1)
+        self.lbl_compat = QLabel("Uyumluluk")
+        self.lbl_compat.setObjectName("muted")
+        self.lbl_fps = QLabel("Kare hızı (FPS)")
+        self.lbl_fps.setObjectName("muted")
+        g.addWidget(self.lbl_compat, 2, 0)
+        g.addWidget(self.lbl_fps, 2, 1)
+        self.cb_compat = QComboBox()
+        self.cb_compat.addItems(COMPAT_MODES)
+        self.cb_compat.setToolTip("Android uyumlu: H.264 + AAC MP4 indirilir; video yine de uyumsuz gelirse (AV1, VP9, "
+                                  "60 fps…) indirme sonunda otomatik dönüştürülür.\nTüm telefon, tablet ve TV'lerde "
+                                  "görüntülü oynar. Orijinal: sitenin en iyi biçimi (AV1/VP9 olabilir).")
+        self.cb_fps = QComboBox()
+        self.cb_fps.addItems(FPS_OPTIONS)
+        self.cb_fps.setToolTip("Eski / düşük güçlü cihazlar 60 fps videoda görüntüyü gösteremeyebilir. "
+                               "25 veya 30 fps her cihazda akıcı oynar.")
+        self.cb_compat.currentTextChanged.connect(self._on_compat_change)
+        self.cb_fps.currentTextChanged.connect(self._on_compat_change)
+        g.addWidget(self.cb_compat, 3, 0)
+        g.addWidget(self.cb_fps, 3, 1)
         c.lay.addLayout(g)
         self.q_hint = QLabel("")
         self.q_hint.setObjectName("hint")
@@ -766,10 +1165,15 @@ class MainWindow(QMainWindow):
 
         chk = QHBoxLayout()
         chk.setSpacing(18)
-        self.chk_playlist = QCheckBox("Oynatma listesinin tamamı")
-        self.chk_thumb = QCheckBox("Kapak resmi göm")
+        self.chk_playlist = QCheckBox("Listenin tamamı")
+        self.chk_playlist.setToolTip("Bağlantı bir oynatma listesindeyse listedeki tüm videoları indir")
+        self.chk_thumb = QCheckBox("Kapak resmi")
+        self.chk_thumb.setToolTip("Kapak resmini dosyaya göm")
         self.chk_subs = QCheckBox("Altyazı (tr/en)")
-        for w in (self.chk_playlist, self.chk_thumb, self.chk_subs):
+        self.chk_clean = QCheckBox("Adları düzelt")
+        self.chk_clean.setToolTip("Dosya adlarından emoji, ｜ ⧸ ： gibi garip karakterleri ve sondaki [video kimliği]ni "
+                                  "temizler.\nBu karakterler bazı cihazlarda dosyanın / klasörün görünmemesine yol açar.")
+        for w in (self.chk_playlist, self.chk_thumb, self.chk_subs, self.chk_clean):
             chk.addWidget(w)
             w.toggled.connect(self._save_options)
         chk.addStretch(1)
@@ -967,6 +1371,9 @@ class MainWindow(QMainWindow):
         self.chk_playlist.setChecked(bool(s["playlist"]))
         self.chk_thumb.setChecked(bool(s["thumbnail"]))
         self.chk_subs.setChecked(bool(s["subtitles"]))
+        self.chk_clean.setChecked(bool(s.get("clean_names", True)))
+        self.cb_compat.setCurrentText(s.get("compat") if s.get("compat") in COMPAT_MODES else COMPAT_MODES[0])
+        self.cb_fps.setCurrentText(s.get("fps") if s.get("fps") in FPS_OPTIONS else FPS_OPTIONS[0])
         self._on_type_change(idx, save=False)
         self._loading_opts = False
 
@@ -989,9 +1396,30 @@ class MainWindow(QMainWindow):
             self.lbl_q.setText("Çözünürlük")
         self._loading = False
         self.chk_subs.setEnabled(idx == 0)
+        for w in (self.lbl_compat, self.lbl_fps, self.cb_compat, self.cb_fps):
+            w.setVisible(not audio)
+        self._apply_compat_ui()
         self._update_hint()
         if save:
             self._save_options()
+
+    def _apply_compat_ui(self):
+        """Android uyumlu modda video biçimi her zaman MP4'tür; format seçimi kilitlenir."""
+        video = self._type_index() != 1
+        lock = video and self.cb_compat.currentText() == COMPAT_MODES[0]
+        if video:
+            self._loading = True
+            self.cb_format.setCurrentText("mp4" if lock else self.s["vformat"])
+            self._loading = False
+        self.cb_format.setEnabled(not lock)
+        self.cb_format.setToolTip("Android uyumlu modda biçim MP4'tür" if lock else "")
+
+    def _on_compat_change(self, _v=None):
+        if getattr(self, "_loading_opts", False):
+            return
+        self.s.update(compat=self.cb_compat.currentText(), fps=self.cb_fps.currentText())
+        self._apply_compat_ui()
+        save_settings(self.s)
 
     def _on_format_change(self, v):
         if getattr(self, "_loading", False) or not v:
@@ -1013,13 +1441,15 @@ class MainWindow(QMainWindow):
             return
         self.s.update(type=TYPES[self._type_index()], playlist=self.chk_playlist.isChecked(),
                       thumbnail=self.chk_thumb.isChecked(), subtitles=self.chk_subs.isChecked(),
-                      folder=self._folder())
+                      clean_names=self.chk_clean.isChecked(), compat=self.cb_compat.currentText(),
+                      fps=self.cb_fps.currentText(), folder=self._folder())
         save_settings(self.s)
 
     def _current_opts(self):
         self._save_options()
         return {k: self.s[k] for k in ("folder", "type", "vformat", "aformat", "resolution", "aquality",
-                                         "playlist", "thumbnail", "subtitles", "parallel")}
+                                         "playlist", "thumbnail", "subtitles", "parallel", "compat", "fps",
+                                         "clean_names")}
 
     def _update_hint(self):
         p = self.preview
@@ -1034,7 +1464,10 @@ class MainWindow(QMainWindow):
         if o["type"] == "Sadece Ses":
             return f"Ses · {o['aformat']} · {o['aquality']}"
         short = "Video" if o["type"] == "Video + Ses" else "Sessiz video"
-        return f"{short} · {o['vformat']} · {o['resolution'].split(' ')[0]}"
+        fps = (o.get("fps") or "").split(" ")[0]
+        fps = "" if not fps or fps == "Orijinal" else f" · {fps} fps"
+        fmt = "Android MP4" if core.is_compat(o) else o["vformat"]
+        return f"{short} · {fmt} · {o['resolution'].split(' ')[0]}{fps}"
 
     # ---------------------------------------------------------- eylemler
     def _paste(self):
@@ -1128,7 +1561,8 @@ class MainWindow(QMainWindow):
         glyph = {"Tamamlandı": G["check"], "Hata": G["error"], "İptal edildi": G["cancel"],
                  "Duraklatıldı": G["pause"], "Bağlantı bekleniyor…": G["warning"],
                  "Yeniden denenecek": G["history"], "İndiriliyor": G["download"],
-                 "İşleniyor": G["sync"]}.get(j.status, G["history"])
+                 "İşleniyor": G["sync"]}.get(j.status, G["convert"] if j.status.startswith("Dönüştür")
+                                             else G["history"])
         st.setIcon(glyph_icon(glyph, _status_color(t, j.status), 14))
         pr = self.table.item(r, 2)
         try:
@@ -1696,6 +2130,17 @@ class MainWindow(QMainWindow):
         self._force_quit = True
         QApplication.quit()
 
+    def _open_converter(self):
+        if not self.ffmpeg:
+            QMessageBox.warning(self, APP_NAME, "ffmpeg henüz kurulmadı.")
+            return
+        if self._conv_dlg is None:
+            self._conv_dlg = ConverterDialog(self)
+        self._conv_dlg.conv.ffmpeg = self.ffmpeg
+        self._conv_dlg.show()
+        self._conv_dlg.raise_()
+        self._conv_dlg.activateWindow()
+
     def _open_settings(self):
         SettingsDialog(self).exec()
 
@@ -1737,6 +2182,14 @@ class MainWindow(QMainWindow):
         ) != QMessageBox.Yes:
             e.ignore()
             return
+        conv = self._conv_dlg.conv.active_count() if self._conv_dlg else 0
+        if conv and QMessageBox.question(
+                self, APP_NAME, f"{conv} video dönüştürülüyor/bekliyor.\n\nKapatırsanız dönüştürme iptal edilecek "
+                                "(orijinal dosyalar etkilenmez).\n\nÇıkılsın mı?") != QMessageBox.Yes:
+            e.ignore()
+            return
+        if self._conv_dlg:
+            self._conv_dlg.cancel_all()
         self.player.stop()
         self._shutdown_jobs()
         e.accept()

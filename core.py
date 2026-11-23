@@ -17,7 +17,7 @@ import threading
 import time
 
 APP_NAME = "Video Müzik İndirici"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 APP_URL = "https://github.com/mehmet-cizmeci/video-muzik-indirici"
 CONFIG_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "VideoMuzikIndirici")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.json")
@@ -48,13 +48,27 @@ AUDIO_FORMATS = ["mp3", "m4a", "opus", "flac", "wav"]
 RESOLUTIONS = ["En iyi", "2160p (4K)", "1440p", "1080p", "720p", "480p", "360p", "240p"]
 AUDIO_QUALITIES = ["En iyi", "320 kbps", "256 kbps", "192 kbps", "128 kbps", "96 kbps"]
 THUMB_OK = {"mp3", "m4a", "mp4", "mkv", "flac", "opus"}
+# Android uyumlu: H.264 + AAC MP4. YouTube'un yeni AV1 biçimini Android 9 ve öncesi oynatamaz; eski / düşük güçlü
+# cihazlar 1080p ve 60 fps'i kaldıramayabilir (ses gelir, görüntü gelmez).
+COMPAT_MODES = ["Android uyumlu (H.264)", "Orijinal (en iyi kalite)"]
+FPS_OPTIONS = ["30 fps (önerilen)", "25 fps", "Orijinal", "60 fps"]
+CONVERT_RESOLUTIONS = ["720p (önerilen)", "1080p", "480p", "Orijinal"]
+VIDEO_EXT = (".mp4", ".mkv", ".webm", ".mov", ".avi", ".m4v", ".flv", ".wmv", ".ts", ".mts", ".3gp", ".mpg", ".mpeg")
 
 DEFAULTS = {
     "folder": DEFAULT_DIR,
     "type": TYPES[0],
     "vformat": "mp4",
     "aformat": "mp3",
-    "resolution": "1080p",
+    "resolution": "720p",
+    "compat": COMPAT_MODES[0],
+    "fps": FPS_OPTIONS[0],
+    "clean_names": True,
+    "conv_res": CONVERT_RESOLUTIONS[0],
+    "conv_fps": FPS_OPTIONS[0],
+    "conv_clean": True,
+    "conv_copy_ok": True,
+    "conv_out": "",
     "aquality": "En iyi",
     "playlist": False,
     "thumbnail": True,
@@ -203,10 +217,17 @@ def build_command(ytdlp, ffmpeg, url, opts):
         if opts["thumbnail"] and fmt in THUMB_OK:
             cmd += ["--embed-thumbnail", "--convert-thumbnails", "jpg"]
     else:
-        fmt = opts["vformat"]
+        compat = is_compat(opts)
+        fmt = "mp4" if compat else opts["vformat"]
+        fps = fps_limit(opts.get("fps"))
         sort = []
+        if compat:
+            # Önce H.264 seçilir (AV1/VP9 yerine); yine de uyumsuz gelirse indirme sonunda dönüştürülür
+            sort += ["vcodec:h264", "acodec:aac"]
         if height:
             sort.append("res:" + height)
+        if fps:
+            sort.append(f"fps:{fps}")
         if fmt == "mp4":
             sort.append("ext:mp4:m4a")
         elif fmt == "webm":
@@ -224,6 +245,163 @@ def build_command(ytdlp, ffmpeg, url, opts):
         if opts["subtitles"] and kind == "Video + Ses":
             cmd += ["--write-subs", "--sub-langs", "tr.*,en.*", "--embed-subs"]
     return cmd
+
+
+# ----------------------------------------------------------------- Android uyumluluğu ve dönüştürme
+def is_compat(opts):
+    return opts.get("compat", COMPAT_MODES[0]) == COMPAT_MODES[0]
+
+
+def fps_limit(choice):
+    """FPS seçeneğinden üst sınır (int) döner; 'Orijinal' için None."""
+    import re
+    m = re.match(r"\s*(\d+)", choice or "")
+    return int(m.group(1)) if m else None
+
+
+def height_limit(choice):
+    """'720p (önerilen)', '1080p', '2160p (4K)' → 720/1080/2160; 'En iyi' / 'Orijinal' → None."""
+    import re
+    m = re.match(r"\s*(\d+)p", choice or "")
+    return int(m.group(1)) if m else None
+
+
+def find_ffprobe(ffmpeg):
+    if ffmpeg:
+        p = os.path.join(os.path.dirname(ffmpeg), "ffprobe.exe" if os.name == "nt" else "ffprobe")
+        if os.path.isfile(p):
+            return p
+    return find_exe("ffprobe")
+
+
+def probe_media(ffprobe, path):
+    """Dosyanın video/ses bilgilerini döner: vcodec, width, height, fps, pix_fmt, profile, acodec, duration."""
+    r = subprocess.run([ffprobe, "-v", "error", "-show_streams", "-show_format", "-of", "json", path],
+                       capture_output=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW, timeout=120)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode("utf-8", errors="replace").strip()[-300:] or "ffprobe okuyamadı")
+    data = json.loads(r.stdout.decode("utf-8", errors="replace"))
+    streams = data.get("streams") or []
+    v = next((s for s in streams if s.get("codec_type") == "video"
+              and not (s.get("disposition") or {}).get("attached_pic")), None)
+    a = next((s for s in streams if s.get("codec_type") == "audio"), None)
+    fps = 0.0
+    rate = (v or {}).get("avg_frame_rate") or (v or {}).get("r_frame_rate") or "0/1"
+    try:
+        num, den = rate.split("/")
+        fps = float(num) / float(den) if float(den) else 0.0
+    except (ValueError, ZeroDivisionError):
+        pass
+    try:
+        duration = float((data.get("format") or {}).get("duration") or 0)
+    except ValueError:
+        duration = 0.0
+    return {
+        "vcodec": (v or {}).get("codec_name"), "width": int((v or {}).get("width") or 0),
+        "height": int((v or {}).get("height") or 0), "fps": fps, "pix_fmt": (v or {}).get("pix_fmt") or "",
+        "profile": (v or {}).get("profile") or "", "acodec": (a or {}).get("codec_name"), "duration": duration,
+        "format": (data.get("format") or {}).get("format_name") or "",
+        "vindex": (v or {}).get("index"),
+    }
+
+
+def compat_plan(info, max_height=None, max_fps=None):
+    """Android uyumlu MP4 için ne gerektiğini döner: 'ok' (uyumlu), 'remux' (yalnızca kap/ses) veya 'encode'."""
+    if not info.get("vcodec"):
+        return "encode" if info.get("acodec") not in (None, "aac", "mp3") else "remux"
+    video_ok = (info["vcodec"] == "h264" and info["pix_fmt"] in ("yuv420p", "yuvj420p")
+                and "10" not in info["profile"] and "4:4:4" not in info["profile"]
+                and not (max_height and info["height"] > max_height)
+                and not (max_fps and info["fps"] > max_fps + 0.5))
+    if not video_ok:
+        return "encode"
+    audio_ok = info["acodec"] in (None, "aac", "mp3")
+    return "ok" if audio_ok and "mp4" in info["format"] else "remux"
+
+
+def transcode(ffmpeg, src, dst, info, max_height=None, max_fps=None, mode="encode", on_proc=None, progress=None):
+    """src'yi Android uyumlu MP4 olarak dst'ye yazar (H.264 Main/High + AAC, faststart).
+    mode='remux' videoyu yeniden kodlamaz. progress(yüzde) çağrılır; on_proc(süreç) iptal için verilir."""
+    cmd = [ffmpeg, "-hide_banner", "-nostdin", "-y", "-i", src]
+    # kapak resmi (attached_pic) değil, asıl video akışı seçilir
+    vi = info.get("vindex")
+    cmd += ["-map", f"0:{vi}" if vi is not None else "0:v:0?", "-map", "0:a:0?", "-sn", "-dn"]
+    if mode == "encode" and info.get("vcodec"):
+        h = info.get("height") or 0
+        target_h = min(h, max_height) if (max_height and h) else h
+        vf = [f"scale=-2:'min({max_height},ih)'"] if max_height else []
+        if max_fps and info.get("fps", 0) > max_fps + 0.5:
+            vf.append(f"fps={max_fps}")
+        vf.append("format=yuv420p")
+        level = "3.0" if target_h <= 480 else "3.1" if target_h <= 720 else "4.0" if target_h <= 1080 else "5.1"
+        cmd += ["-vf", ",".join(vf), "-c:v", "libx264", "-profile:v", "main" if target_h <= 1080 else "high",
+                "-level", level, "-preset", "veryfast", "-crf", "23"]
+    else:
+        cmd += ["-c:v", "copy"]
+    cmd += ["-c:a", "copy"] if info.get("acodec") == "aac" else ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
+    cmd += ["-movflags", "+faststart", "-progress", "pipe:1", "-nostats", dst]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL,
+                            creationflags=CREATE_NO_WINDOW)
+    if on_proc:
+        on_proc(proc)
+    err_tail = []
+
+    def read_err():
+        for raw in proc.stderr:
+            err_tail.append(raw.decode("utf-8", errors="replace").rstrip())
+            del err_tail[:-20]
+    threading.Thread(target=read_err, daemon=True).start()
+    dur = info.get("duration") or 0
+    for raw in proc.stdout:
+        line = raw.decode("utf-8", errors="replace").strip()
+        if progress and dur and line.startswith("out_time_us=") and line[12:].isdigit():
+            progress(min(99.9, int(line[12:]) / 1e6 / dur * 100))
+    code = proc.wait()
+    if code != 0:
+        try:
+            os.remove(dst)
+        except OSError:
+            pass
+        raise RuntimeError("ffmpeg dönüştürme hatası: " + (" | ".join(l for l in err_tail if l)[-400:] or f"kod {code}"))
+
+
+def clean_filename(name):
+    """Dosya adından emoji, garip simgeler ve sondaki [YouTube kimliği]ni temizler (uzantı korunur).
+    Bu karakterler bazı cihazlarda (ör. eski Android) dosya adının bozulmasına ve klasörün okunamamasına yol açar."""
+    import re
+    import unicodedata
+    base, ext = os.path.splitext(name)
+    base = unicodedata.normalize("NFC", base)
+    base = re.sub(r"\s*\[[A-Za-z0-9_-]{11}\]\s*$", "", base)              # YouTube kimliği
+    base = "".join(c for c in base if ord(c) <= 0xFFFF)                    # emoji vb. (BMP dışı)
+    base = re.sub(r"[☀-➿⬀-⯿︀-️​-‍⃣̇⁠]", "", base)
+    base = re.sub(r"[｜|⧸/\\]", " - ", base)                              # yt-dlp'nin Windows yerine koyduğu karakterler
+    base = re.sub(r"[：:]", " -", base)
+    base = re.sub(r"[＂\"＊*？?＜<＞>]", "", base).replace("•", "-")
+    base = re.sub(r"\s+", " ", base)
+    base = re.sub(r"(\s*-\s*){2,}", " - ", base).strip(" -._")
+    return (base or "video") + ext.lower()
+
+
+def unique_path(path):
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    n = 2
+    while os.path.exists(f"{base} ({n}){ext}"):
+        n += 1
+    return f"{base} ({n}){ext}"
+
+
+def rename_clean(path):
+    """Dosyayı temiz adla yeniden adlandırır; yeni yolu döner (değişmediyse aynısı)."""
+    folder, name = os.path.split(path)
+    new_name = clean_filename(name)
+    if new_name == name:
+        return path
+    target = unique_path(os.path.join(folder, new_name))
+    os.replace(path, target)
+    return target
 
 
 # ----------------------------------------------------------------- iş öğesi
@@ -270,6 +448,7 @@ class Job:
         self.speed = ""
         self.eta = ""
         self.file = None
+        self.files = []         # bu işte inen tüm dosyalar (oynatma listesinde birden çok)
         self.error = ""
         self.proc = None
         self.cancelled = False
@@ -353,7 +532,11 @@ class Downloader:
                     job.status = "Duraklatıldı" if job.shutdown else "İptal edildi"
                     break
                 if code == 0:
-                    job.status, job.percent, job.error = "Tamamlandı", "100%", ""
+                    self._postprocess(job)
+                    if job.cancelled:
+                        job.status = "Duraklatıldı" if job.shutdown else "İptal edildi"
+                    else:
+                        job.status, job.percent, job.error = "Tamamlandı", "100%", ""
                     break
                 job.error = err or f"yt-dlp çıkış kodu {code}"
                 if is_permanent(job.error):
@@ -391,6 +574,59 @@ class Downloader:
             self.events.put(("done", job))
             write_log(job)
             self.pump()
+
+    def _postprocess(self, job):
+        """İndirme sonrası: Android uyumlu değilse H.264 MP4'e dönüştürür, bozuk dosya adlarını temizler."""
+        opts = job.opts
+        video = opts["type"] != "Sadece Ses"
+        compat = video and is_compat(opts)
+        ffprobe = find_ffprobe(self.ffmpeg) if (compat and self.ffmpeg) else None
+        max_h, max_fps = height_limit(opts.get("resolution")), fps_limit(opts.get("fps"))
+        n = len(job.files)
+        for i, path in enumerate(list(job.files)):
+            if job.cancelled:
+                return
+            if not os.path.isfile(path):
+                continue
+            new = path
+            if ffprobe:
+                info = probe_media(ffprobe, path)
+                plan = compat_plan(info, max_h, max_fps)
+                if plan != "ok":
+                    label = "Dönüştürülüyor" if plan == "encode" else "İşleniyor"
+                    if n > 1:
+                        label += f" ({i + 1}/{n})"
+                    self._set(job, label)
+                    job.percent = "0%"
+                    base = os.path.splitext(path)[0]
+                    tmp = base + ".uyumlu.tmp.mp4"
+
+                    def prog(p, label=label):
+                        job.percent = f"{p:.0f}%"
+                        job.status = label
+                        self.events.put(("update", job))
+
+                    def on_proc(proc):
+                        job.proc = proc
+                        if job.cancelled:
+                            self._kill(job)
+                    try:
+                        transcode(self.ffmpeg, path, tmp, info, max_h, max_fps, plan, on_proc, prog)
+                    except RuntimeError:
+                        if job.cancelled:
+                            return
+                        raise
+                    finally:
+                        job.proc = None
+                    new = base + ".mp4"
+                    os.replace(tmp, new)
+                    if os.path.normcase(new) != os.path.normcase(path):
+                        os.remove(path)
+            if opts.get("clean_names", True):
+                new = rename_clean(new)
+            job.files[i] = new
+            if job.file == path:
+                job.file = new
 
     def _attempt(self, job, attempt):
         """Tek bir yt-dlp çalıştırması. (çıkış kodu, son hata, ilerleme oldu mu) döner."""
@@ -439,6 +675,8 @@ class Downloader:
                 start_pct = None
             elif line.startswith("FILE|"):
                 job.file = line[5:]
+                if job.file not in job.files:
+                    job.files.append(job.file)
                 progressed = True
             elif line.startswith(("[Merger]", "[ExtractAudio]", "[VideoRemuxer]", "[EmbedThumbnail]")):
                 job.status = "İşleniyor"
@@ -452,6 +690,178 @@ class Downloader:
             last_err = "Bağlantı askıda kaldı (veri gelmiyor), yeniden bağlanılıyor"
             code = code or 1
         return code, last_err, progressed
+
+
+# ----------------------------------------------------------------- MP4 dönüştürücü (yerel dosyalar)
+CONV_SUBDIR = "Android uyumlu"
+
+
+def collect_videos(paths):
+    """Dosya ve klasör listesinden video dosyalarını toplar (klasörlerde alt klasörler dahil değil)."""
+    out = []
+    for p in paths:
+        if os.path.isdir(p):
+            for name in sorted(os.listdir(p), key=str.lower):
+                full = os.path.join(p, name)
+                if os.path.isfile(full) and name.lower().endswith(VIDEO_EXT) and ".tmp." not in name:
+                    out.append(full)
+        elif os.path.isfile(p) and p.lower().endswith(VIDEO_EXT):
+            out.append(p)
+    seen, uniq = set(), []
+    for p in out:
+        k = os.path.normcase(os.path.abspath(p))
+        if k not in seen:
+            seen.add(k)
+            uniq.append(p)
+    return uniq
+
+
+class ConvJob:
+    _next = 1
+
+    def __init__(self, src, opts):
+        self.id = ConvJob._next
+        ConvJob._next += 1
+        self.src = src
+        self.opts = opts        # conv_res, conv_fps, conv_clean, conv_copy_ok, conv_out
+        self.dst = None
+        self.status = "Bekliyor"
+        self.percent = ""
+        self.info = ""          # ör. "AV1 1920x1080 60fps → H.264 720p 30fps"
+        self.error = ""
+        self.proc = None
+        self.cancelled = False
+
+
+def conv_out_dir(job):
+    out = (job.opts.get("conv_out") or "").strip()
+    return out or os.path.join(os.path.dirname(job.src), CONV_SUBDIR)
+
+
+class Converter:
+    """Yerel videoları Android uyumlu MP4'e (H.264 + AAC) çevirir. Orijinallere dokunmaz;
+    çıktılar ayrı bir klasöre yazılır. Olaylar: ("conv_update", iş), ("conv_done", iş)."""
+
+    def __init__(self, ffmpeg, events, parallel=None):
+        self.ffmpeg = ffmpeg
+        self.events = events
+        self.pending = []
+        self.running = set()
+        self.lock = threading.Lock()
+        self.parallel = parallel or (2 if (os.cpu_count() or 2) >= 8 else 1)
+
+    def add(self, job):
+        with self.lock:
+            self.pending.append(job)
+        self.events.put(("conv_update", job))
+        self.pump()
+
+    def pump(self):
+        with self.lock:
+            while self.pending and len(self.running) < self.parallel:
+                job = self.pending.pop(0)
+                if job.cancelled:
+                    continue
+                self.running.add(job.id)
+                threading.Thread(target=self._run, args=(job,), daemon=True).start()
+
+    def active_count(self):
+        with self.lock:
+            return len(self.running) + len(self.pending)
+
+    def cancel(self, job):
+        job.cancelled = True
+        with self.lock:
+            if job in self.pending:
+                self.pending.remove(job)
+                job.status = "İptal edildi"
+                self.events.put(("conv_update", job))
+                self.events.put(("conv_done", job))
+                return
+        p = job.proc
+        if p and p.poll() is None:
+            p.kill()
+
+    def _upd(self, job, status=None):
+        if status:
+            job.status = status
+        self.events.put(("conv_update", job))
+
+    def _run(self, job):
+        tmp = None
+        try:
+            ffprobe = find_ffprobe(self.ffmpeg)
+            if not (self.ffmpeg and ffprobe):
+                raise RuntimeError("ffmpeg / ffprobe bulunamadı")
+            self._upd(job, "İnceleniyor")
+            info = probe_media(ffprobe, job.src)
+            if not info.get("vcodec"):
+                raise RuntimeError("Dosyada video bulunamadı")
+            max_h = height_limit(job.opts.get("conv_res"))
+            max_fps = fps_limit(job.opts.get("conv_fps"))
+            plan = compat_plan(info, max_h, max_fps)
+            out_dir = conv_out_dir(job)
+            os.makedirs(out_dir, exist_ok=True)
+            name = os.path.splitext(os.path.basename(job.src))[0] + ".mp4"
+            if job.opts.get("conv_clean", True):
+                name = clean_filename(name)
+            dst = unique_path(os.path.join(out_dir, name))
+            if os.path.normcase(os.path.abspath(dst)) == os.path.normcase(os.path.abspath(job.src)):
+                raise RuntimeError("Çıktı dosyası kaynakla aynı olamaz")
+            src_desc = describe(info)
+            if plan == "ok" and job.opts.get("conv_copy_ok", True):
+                job.info = src_desc + " → zaten uyumlu, kopyalandı"
+                self._upd(job, "Kopyalanıyor")
+                tmp = dst + ".tmp"
+                shutil.copyfile(job.src, tmp)
+                os.replace(tmp, dst)
+            else:
+                mode = "remux" if plan in ("ok", "remux") else "encode"
+                h = min(info["height"], max_h) if max_h else info["height"]
+                f = min(info["fps"], max_fps) if max_fps else info["fps"]
+                job.info = src_desc + (" → H.264 " + f"{h}p {round(f)}fps" if mode == "encode"
+                                       else " → yalnızca MP4 kabı / AAC ses")
+                self._upd(job, "Dönüştürülüyor")
+                job.percent = "0%"
+                tmp = os.path.splitext(dst)[0] + ".tmp.mp4"
+
+                def prog(p):
+                    job.percent = f"{p:.0f}%"
+                    self._upd(job)
+
+                def on_proc(proc):
+                    job.proc = proc
+                    if job.cancelled:
+                        proc.kill()
+                transcode(self.ffmpeg, job.src, tmp, info, max_h, max_fps, mode, on_proc, prog)
+                os.replace(tmp, dst)
+            tmp = None
+            job.dst = dst
+            job.percent = "100%"
+            job.status = "Tamamlandı"
+        except Exception as e:  # noqa: BLE001
+            if job.cancelled:
+                job.status = "İptal edildi"
+            else:
+                job.status, job.error = "Hata", str(e)
+        finally:
+            if tmp and os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+            job.proc = None
+            with self.lock:
+                self.running.discard(job.id)
+            self.events.put(("conv_update", job))
+            self.events.put(("conv_done", job))
+            self.pump()
+
+
+def describe(info):
+    names = {"h264": "H.264", "hevc": "H.265", "av1": "AV1", "vp9": "VP9", "vp8": "VP8", "mpeg4": "MPEG-4"}
+    v = names.get(info.get("vcodec"), (info.get("vcodec") or "?").upper())
+    return f"{v} {info.get('height', 0)}p {round(info.get('fps') or 0)}fps"
 
 
 # ----------------------------------------------------------------- yt-dlp sürümü / güncelleme

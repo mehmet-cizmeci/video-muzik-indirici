@@ -1,5 +1,20 @@
 # Değişiklik Günlüğü
 
+## [2.1.0] — 2026-11-23
+
+Her cihazda görüntülü oynayan videolar ve MP4 dönüştürücü.
+
+### Yeni
+- **Android uyumlu mod (varsayılan):** Videolar H.264 + AAC MP4 olarak indirilir. YouTube'un yeni **AV1** biçimini Android 9 ve öncesi oynatamıyor, eski cihazlar 60 fps / 1080p videoda görüntüyü gösteremiyordu ("ses var, görüntü yok"). İnen video yine de uyumsuzsa indirme sonunda otomatik dönüştürülür (durum: *Dönüştürülüyor*). İstenirse **Orijinal (en iyi kalite)** seçilebilir.
+- **Kare hızı (FPS) seçimi:** 30 fps (önerilen, varsayılan), 25 fps, Orijinal veya 60 fps
+- **Dosya adlarını düzelt (varsayılan açık):** Emoji, `｜ ⧸ ：` gibi karakterler ve sondaki `[video kimliği]` dosya adından temizlenir. Bu karakterler bazı telefonlarda dosyanın, hatta tüm klasörün görünmemesine yol açıyordu.
+- **MP4 Dönüştürücü** (üst çubuk): Bilgisayardaki videoları (mkv, webm, avi, mov, …) Android / TV uyumlu MP4'e çevirir. Dosya veya klasör ekleme, sürükle-bırak, çözünürlük (720p önerilen) ve FPS sınırı, ad düzeltme, uyumlu olanları kayıpsız kopyalama, satır satır ilerleme ve iptal. **Orijinallere dokunmaz**; çıktılar ayrı klasöre (varsayılan: videonun yanındaki `Android uyumlu` klasörü) yazılır.
+
+### Değişen
+- Varsayılan çözünürlük 720p (her cihazda akıcı oynar)
+- Kuyruktaki "Tür" sütunu uyumluluk modunu ve FPS sınırını da gösterir
+- Seçenek kutularının adları kısaltıldı (ayrıntılar fare ile üzerine gelince görünür)
+
 ## [2.0.0] — 2026-11-10
 
 Yeni arayüz, önizleme ve kendini güncelleme.

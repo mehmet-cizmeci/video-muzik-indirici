@@ -2,7 +2,7 @@
 
 [← Ana sayfa](../README.md) · [Sık Sorulan Sorular](SSS.md) · [Teknik Bilgi](TEKNIK.md)
 
-Bu kılavuz **Video Müzik İndirici 2.x** sürümünü anlatır.
+Bu kılavuz **Video Müzik İndirici 2.1** sürümünü anlatır.
 
 ## İçindekiler
 
@@ -19,6 +19,7 @@ Bu kılavuz **Video Müzik İndirici 2.x** sürümünü anlatır.
 11. [Güncellemeler: uygulama ve yt-dlp](#11-güncellemeler-uygulama-ve-yt-dlp)
 12. [Bağlantı kopması, uyku ve kapatma](#12-bağlantı-kopması-uyku-ve-kapatma)
 13. [Hangi formatı seçmeliyim?](#13-hangi-formatı-seçmeliyim)
+    - [13a. MP4 Dönüştürücü](#13a-mp4-dönüştürücü)
 14. [Klavye ve fare kısayolları](#14-klavye-ve-fare-kısayolları)
 15. [İpuçları](#15-ipuçları)
 
@@ -55,6 +56,7 @@ Ekran dört karttan oluşur. Kartlar arasındaki boşluklardan tutup sürükleye
 | Öğe | Ne yapar |
 |---|---|
 | **Yeni sürüm x.y.z** (yeşil, yalnızca güncelleme varsa) | Güncelleme penceresini açar |
+| **MP4 Dönüştürücü** | Bilgisayardaki videoları Android / TV uyumlu MP4'e çeviren pencereyi açar ([13a](#13a-mp4-dönüştürücü)) |
 | ☀ / ☾ | Açık ve koyu tema arasında geçiş yapar |
 | ? | Bu kılavuzu tarayıcıda açar |
 | ⚙ | Ayarlar penceresini açar |
@@ -81,9 +83,12 @@ Aynı bağlantı iki kez yazılırsa bir kez eklenir; `#` ile başlayan satırla
 | **Format** | Dosya türü: video için mp4/mkv/webm, ses için mp3/m4a/opus/flac/wav |
 | **Çözünürlük** / **Ses kalitesi** | Video türlerinde en yüksek çözünürlük; ses türünde bit hızı |
 | *Bu videoda en yüksek çözünürlük: …* | Önizlenen videonun sunduğu en yüksek kalite (bilgi amaçlı) |
-| **Oynatma listesinin tamamı** | İşaretliyse listedeki tüm videolar indirilir |
-| **Kapak resmi göm** | Küçük resmi dosyaya kapak olarak ekler |
+| **Uyumluluk** | **Android uyumlu (H.264)** (varsayılan): her telefon, tablet ve TV'de görüntülü oynayan MP4 iner; gerekirse indirme sonunda otomatik dönüştürülür. Bu modda format MP4'e sabitlenir. **Orijinal (en iyi kalite)**: sitenin en iyi biçimi (AV1/VP9 olabilir) |
+| **Kare hızı (FPS)** | 30 fps (varsayılan), 25 fps, Orijinal veya 60 fps — üst sınırdır |
+| **Listenin tamamı** | İşaretliyse oynatma listesindeki tüm videolar indirilir |
+| **Kapak resmi** | Küçük resmi dosyaya kapak olarak ekler |
 | **Altyazı (tr/en)** | Varsa Türkçe ve İngilizce altyazıyı videoya ekler (yalnızca Video + Ses) |
+| **Adları düzelt** | Dosya adından emoji, `｜ ⧸ ：` gibi karakterleri ve sondaki `[video kimliği]`ni temizler (varsayılan açık) |
 | **İndirme yeri** | Dosyaların kaydedileceği klasör (Gözat · varsayılana dön · Aç) |
 
 Tüm seçimleriniz **otomatik hatırlanır**. Seçenekler, bağlantıyı **kuyruğa eklediğiniz anda** geçerlidir; kuyruktaki her satır kendi ayarlarını taşır. Böylece bir bağlantıyı mp4, ardından başka birini mp3 olarak ekleyebilirsiniz.
@@ -336,6 +341,25 @@ YouTube ve diğer siteler sık değişir; **"bir anda hiçbir video inmiyor"** d
 | **opus** | Aynı boyutta en iyi kalite; YouTube'un orijinal ses formatı |
 | **flac** | Kayıpsız kapsayıcı (kaynak kayıplı olduğu için kalite artmaz, dosya büyür) |
 | **wav** | Ses düzenleme programları için; çok büyük dosyalar, kapak eklenemez |
+
+> **Video telefonda/TV'de sesli ama görüntüsüz mü?** Uyumluluk **Android uyumlu**, kare hızı **30 fps** ve çözünürlük **720p** olarak kalsın. Önceden indirilmiş videoları [MP4 Dönüştürücü](#13a-mp4-dönüştürücü) ile düzeltebilirsiniz.
+
+---
+
+## 13a. MP4 Dönüştürücü
+
+Üst çubuktaki **MP4 Dönüştürücü** düğmesi, bilgisayarınızdaki videoları (mkv, webm, avi, mov, mp4…) her cihazda görüntülü oynayan MP4'e (H.264 + AAC) çevirir.
+
+1. **Dosya ekle** veya **Klasör ekle**'ye basın ya da videoları pencereye sürükleyin.
+2. **Çözünürlük** (en fazla; 720p önerilir, küçük videolar büyütülmez) ve **Kare hızı** seçin.
+3. **Dosya adlarını düzelt** ve **Zaten uyumlu olanları dönüştürmeden kopyala** kutuları varsayılan olarak açıktır.
+4. **Çıktı klasörü** boş bırakılırsa her videonun yanında **`Android uyumlu`** klasörü oluşturulur.
+5. **Dönüştür**'e basın. Her satırda ilerleme ve "AV1 1080p 60fps → H.264 720p 30fps" gibi bir açıklama görünür.
+
+- **Orijinal dosyalara dokunulmaz**; aynı adda dosya varsa yeni dosya `(2)` ekiyle kaydedilir.
+- Pencereyi kapatsanız da dönüştürme arka planda sürer; düğmeye basınca pencere geri gelir.
+- Satıra çift tıklamak çıktı dosyasını klasörde gösterir; hatalı satırda hata ayrıntısını açar.
+- **Seçilenleri iptal et** süren dönüştürmeyi durdurur, yarım dosyayı siler.
 
 ---
 
