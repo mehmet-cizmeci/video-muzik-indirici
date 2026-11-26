@@ -72,7 +72,7 @@
 > **"Windows bilgisayarınızı korudu" uyarısı çıkarsa:** Uygulama ücretli bir kod imzalama sertifikasıyla imzalanmadığı için Windows SmartScreen ilk çalıştırmada uyarı gösterebilir. **Ek bilgi → Yine de çalıştır** seçeneğine tıklayın. Ayrıntılar: [SSS](docs/SSS.md#windows-bilgisayarınızı-korudu-uyarısı-çıkıyor), [İmza durumu](docs/IMZALAMA.md).
 
 > [!TIP]
-> **1.x sürümünden geçiş:** 1.0.0 kendini güncelleyemez; 2.0.0'ı bir kez elle indirip eski exe'nin yerine koyun. Ayarlarınız ve yarım kalan indirmeleriniz korunur. Bundan sonraki sürümler otomatik gelir.
+> **1.x sürümünden geçiş:** 1.0.0 kendini güncelleyemez; son sürümü bir kez elle indirip eski exe'nin yerine koyun. Ayarlarınız ve yarım kalan indirmeleriniz korunur. Bundan sonraki sürümler otomatik gelir.
 
 ## Kısaca kullanım
 
@@ -129,6 +129,8 @@ YouTube artık birçok videoyu **AV1** biçiminde veriyor. Android 9 ve öncesi 
 | **Uyumluluk** | Android uyumlu (H.264) | H.264 + AAC MP4 indirilir; gelen video yine de uyumsuzsa indirme sonunda otomatik dönüştürülür. *Orijinal* seçilirse sitenin en iyi biçimi (AV1/VP9 olabilir) iner. |
 | **Kare hızı (FPS)** | 30 fps | 25 fps, Orijinal veya 60 fps de seçilebilir. 25/30 fps her cihazda akıcıdır. |
 | **Adları düzelt** | Açık | Emoji, garip karakterler ve sondaki `[video kimliği]` dosya adından temizlenir. |
+
+<img src="docs/img/donusturucu.png" alt="MP4 Dönüştürücü penceresi" width="720">
 
 **MP4 Dönüştürücü** (üst çubuktaki düğme) aynı işlemi bilgisayardaki videolara uygular: dosya veya klasör ekleyin (ya da sürükleyin), çözünürlük (720p önerilir) ve FPS sınırını seçin, **Dönüştür**'e basın. Zaten uyumlu olan videolar kalite kaybı olmadan kopyalanır. Orijinal dosyalara dokunulmaz; çıktılar varsayılan olarak videonun yanındaki **`Android uyumlu`** klasörüne yazılır.
 

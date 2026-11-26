@@ -10,6 +10,7 @@ Bu sayfa uygulamanın nasıl çalıştığını, dosyalarını nerede tuttuğunu
 - [Dosya ve klasör konumları](#dosya-ve-klasör-konumları)
 - [yt-dlp ve FFmpeg'in bulunması ve kurulumu](#yt-dlp-ve-ffmpegin-bulunması-ve-kurulumu)
 - [Kullanılan yt-dlp ayarları](#kullanılan-yt-dlp-ayarları)
+- [Android uyumluluğu ve dönüştürme](#android-uyumluluğu-ve-dönüştürme)
 - [Kesinti ve yeniden deneme mantığı](#kesinti-ve-yeniden-deneme-mantığı)
 - [Önizleme](#önizleme)
 - [Uygulama güncellemesi](#uygulama-güncellemesi)
@@ -27,7 +28,7 @@ Uygulama üç Python dosyasından oluşur:
 |---|---|
 | `indirici.pyw` | Giriş noktası; yalnızca arayüzü başlatır |
 | `core.py` | Arayüzden bağımsız çekirdek: indirme kuyruğu ve yt-dlp çalıştırma, yeniden deneme, ayarlar, kalıcı kuyruk, araç kurulumu, yt-dlp güncelleme, önizleme bilgisi/akış adresi, uygulama güncellemesi. Yalnızca standart kütüphaneyi kullanır |
-| `ui_qt.py` | **PySide6 (Qt 6)** arayüzü: tema/stil (QSS), kartlar, kuyruk tablosu, önizleme oynatıcısı (`QMediaPlayer` + `QVideoWidget`), ayarlar/güncelleme/kurulum pencereleri |
+| `ui_qt.py` | **PySide6 (Qt 6)** arayüzü: tema/stil (QSS), kartlar, kuyruk tablosu, önizleme oynatıcısı (`QMediaPlayer` + `QVideoWidget`), ayarlar/güncelleme/kurulum pencereleri, MP4 Dönüştürücü penceresi |
 
 ```
 ┌────────────────────────── Arayüz (Qt, ana iş parçacığı) ───────────────────────────────┐
@@ -107,13 +108,44 @@ Türe göre eklenenler:
 | Seçim | Eklenen ayarlar |
 |---|---|
 | Video + Ses | `-f "bv*+ba/b" --merge-output-format <fmt>` ve `-S "res:<yükseklik>[,ext:mp4:m4a]"`; mp4/mkv için `--remux-video <fmt>` |
-| Sadece Video | `-f "bv/b"` ve aynı `-S` sıralaması |
+| Sessiz Video | `-f "bv/b"` ve aynı `-S` sıralaması |
+| Uyumluluk: Android uyumlu | Format `mp4`'e sabitlenir; `-S` sıralamasının başına `vcodec:h264,acodec:aac` eklenir |
+| Kare hızı (25 / 30 / 60 fps) | `-S` sıralamasına `fps:<N>` eklenir (üst sınır olarak tercih edilir) |
 | Sadece Ses | `-f "ba/b" -x --audio-format <fmt> --audio-quality <0 \| 320K …>` |
 | Kapak resmi | `--embed-thumbnail --convert-thumbnails jpg` (mp3, m4a, opus, flac, mp4, mkv) |
 | Altyazı | `--write-subs --sub-langs "tr.*,en.*" --embed-subs` |
 | Oynatma listesi | `--yes-playlist` ve `-o "%(playlist_title)s/%(playlist_index)03d - %(title)s [%(id)s].%(ext)s"`; değilse `--no-playlist` |
 
 Çözünürlük `-f` filtresi yerine `-S res:N` **sıralaması** ile uygulanır: bu yöntem tam eşleşme yoksa hata vermek yerine N'nin altındaki en iyi kaliteyi seçer.
+
+## Android uyumluluğu ve dönüştürme
+
+2.1 sürümüyle gelen bu katman, inen videonun **her cihazda görüntülü** oynamasını sağlar (Android 9 ve öncesi AV1 oynatamaz; eski cihazlar 1080p/60 fps'te görüntü veremez).
+
+1. **İndirmeden önce:** *Android uyumlu* modda yt-dlp'ye H.264 + AAC akışlarını öne alan `-S vcodec:h264,acodec:aac,res:N,fps:N,ext:mp4:m4a` sıralaması verilir.
+2. **İndirmeden sonra:** dosya `ffprobe` ile incelenir (`probe_media`: kodek, çözünürlük, FPS, piksel biçimi, profil, ses kodeki). `compat_plan` üç sonuçtan birini verir:
+
+| Sonuç | Koşul | Yapılan |
+|---|---|---|
+| `ok` | H.264, `yuv420p`, 8 bit, sınırlar içinde; ses AAC/MP3; kap MP4 | Dokunulmaz |
+| `remux` | Video uygun, yalnızca kap veya ses uygun değil | `-c:v copy`, ses gerekirse AAC'ye çevrilir |
+| `encode` | AV1/VP9/H.265, 10 bit, seçilen çözünürlük veya FPS sınırının üstü | Yeniden kodlanır |
+
+3. **Dönüştürme (`transcode`)** FFmpeg ayarları:
+
+```
+-map 0:<asıl video akışı> -map 0:a:0? -sn -dn
+-vf scale=-2:'min(<yükseklik>,ih)',fps=<N>,format=yuv420p
+-c:v libx264 -profile:v main (1080p üstünde high) -level 3.0/3.1/4.0/5.1 -preset veryfast -crf 23
+-c:a aac -b:a 128k -ac 2   (ses zaten AAC ise -c:a copy)
+-movflags +faststart -progress pipe:1
+```
+
+   Kapak resmi akışı (`attached_pic`) video olarak seçilmez. İlerleme `-progress` çıktısındaki `out_time_us` ile hesaplanır; iptalde süreç sonlandırılır ve yarım dosya silinir. Durum sütununda *Dönüştürülüyor* görünür.
+
+4. **Dosya adı düzeltme (`clean_filename`):** NFC normalleştirme, sondaki 11 karakterlik `[YouTube kimliği]`, BMP dışı karakterler (emoji), simge blokları ve yt-dlp'nin Windows için koyduğu `｜ ⧸ ：` gibi tam genişlik karakterler temizlenir/` - ` ile değiştirilir. Aynı adda dosya varsa `unique_path` `(2)` eki verir.
+
+**MP4 Dönüştürücü** (`ConverterDialog` + `core.Converter`) aynı `probe_media → compat_plan → transcode` zincirini yerel dosyalara uygular: `collect_videos` klasörleri tarar, `ok` sonuçlu dosyalar (*Zaten uyumlu olanları kopyala* açıksa) kayıpsız kopyalanır, çıktılar varsayılan olarak her videonun yanındaki `Android uyumlu` (`CONV_SUBDIR`) klasörüne yazılır; bu klasördeki dosyalar tekrar listeye alınmaz. Pencere kapatılınca dönüştürme arka planda sürer.
 
 ## Kesinti ve yeniden deneme mantığı
 
@@ -215,6 +247,7 @@ video-muzik-indirici/
 ├── indirici.ico / .png     # uygulama simgesi
 ├── build.bat               # exe derleme (+ imzalama, SHA-256) betiği
 ├── tools/imzala.ps1        # ortak kod imzalama betiği
+├── tools/ekran-goruntuleri.py  # docs/img ekran görüntülerini örnek verilerle yeniden üretir
 ├── README.md
 ├── CHANGELOG.md
 ├── LICENSE
@@ -225,5 +258,7 @@ video-muzik-indirici/
     ├── IMZALAMA.md
     └── img/                # ekran görüntüleri
 ```
+
+Yeni sürümde arayüz değiştiyse ekran görüntülerini yenilemek için depo kökünde `python tools/ekran-goruntuleri.py` ve `python tools/ekran-goruntuleri.py light` çalıştırın. Betik gerçek arayüzü örnek verilerle açar, indirme yapmaz ve ayarlarınıza dokunmaz (`kurulum.png` elle alınır).
 
 Katkılar memnuniyetle karşılanır: [Issues](https://github.com/mehmet-cizmeci/video-muzik-indirici/issues) üzerinden öneri veya hata bildirebilir, Pull Request gönderebilirsiniz.

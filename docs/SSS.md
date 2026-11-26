@@ -42,6 +42,9 @@
 - [Seçtiğim çözünürlükte inmedi](#seçtiğim-çözünürlükte-inmedi)
 - [Videonun sesi yok](#videonun-sesi-yok)
 - [Video telefonumda / TV'de açılmıyor](#video-telefonumda--tvde-açılmıyor)
+- [Ses geliyor ama görüntü yok (telefon, tablet, TV)](#ses-geliyor-ama-görüntü-yok-telefon-tablet-tv)
+- [Telefonda dosya ya da klasör görünmüyor](#telefonda-dosya-ya-da-klasör-görünmüyor)
+- [Durum "Dönüştürülüyor" yazıyor, neden bekliyorum?](#durum-dönüştürülüyor-yazıyor-neden-bekliyorum)
 - [İndirilen dosyalar nerede?](#i̇ndirilen-dosyalar-nerede)
 - [Klasörde .part veya .ytdl uzantılı dosyalar var](#klasörde-part-veya-ytdl-uzantılı-dosyalar-var)
 - [Kapak resmi görünmüyor](#kapak-resmi-görünmüyor)
@@ -236,17 +239,34 @@ Uygulama ikonları Windows'un yerleşik ikon yazı tipiyle çizilir (Windows 11'
 
 Seçilen çözünürlük bir **üst sınırdır**. Video o çözünürlükte yoksa, altındaki en iyi kalite indirilir. Örneğin 720p yüklenmiş bir videoda 1080p seçmek 720p dosya verir.
 
-`mp4` formatında, uyumluluk için H.264/AV1 + AAC akışları tercih edilir. YouTube'da 1440p ve 4K genellikle yalnızca VP9 ile sunulduğundan bu çözünürlükler için **mkv** seçin.
+**Uyumluluk: Android uyumlu** (varsayılan) seçiliyken video her zaman H.264 MP4 olarak hazırlanır; YouTube 1440p ve 4K'yı genellikle yalnızca VP9/AV1 ile sunduğu için bu çözünürlükler indirme sonunda dönüştürülür ve uzun sürebilir. En yüksek kaliteyi olduğu gibi almak istiyorsanız **Uyumluluk: Orijinal** ve format olarak **mkv** seçin.
+
+Kare hızı da bir üst sınırdır: **30 fps** seçiliyken 60 fps'lik video 30 fps'e düşürülür. Orijinal akıcılık için **Kare hızı: Orijinal** seçin.
 
 ### Videonun sesi yok
 
-**İndirme türü** olarak `Sadece Video (sessiz)` seçilmiş olabilir. `Video + Ses` seçip yeniden indirin.
+**İndirme türü** olarak `Sessiz Video` seçilmiş olabilir. `Video + Ses` seçip yeniden indirin.
 
 Ses var ama bazı oynatıcılarda duyulmuyorsa, dosya `opus` ses içeriyor olabilir; [VLC](https://www.videolan.org/) ile açmayı deneyin veya `mp4` formatını kullanın.
 
 ### Video telefonumda / TV'de açılmıyor
 
-Formatı **mp4** seçin. mkv ve webm dosyaları bazı cihazlarda desteklenmez. 4K/AV1 videolar eski cihazlarda donabilir; 1080p seçmeyi deneyin.
+2.1 sürümünden itibaren varsayılan ayarlar (**Uyumluluk: Android uyumlu**, **720p**, **30 fps**, **Adları düzelt** açık) her cihazda oynayan dosya üretir. Bu ayarları değiştirdiyseniz geri alın.
+
+### Ses geliyor ama görüntü yok (telefon, tablet, TV)
+
+YouTube artık birçok videoyu **AV1** biçiminde veriyor; Android 9 ve öncesi bu biçimi oynatamaz. Eski veya düşük güçlü cihazlar **1080p / 60 fps** videolarda da görüntüyü gösteremeyebilir.
+
+- Yeni indirmeler için: **Uyumluluk: Android uyumlu**, **Kare hızı: 30 fps**, **Çözünürlük: 720p** seçin (varsayılanlar bunlardır).
+- Daha önce indirdiğiniz videolar için: üst çubuktaki **MP4 Dönüştürücü** ile videoları seçip **Dönüştür**'e basın. Orijinallere dokunulmaz; çıktılar videonun yanındaki `Android uyumlu` klasörüne yazılır. Ayrıntı: [Kullanım Kılavuzu › MP4 Dönüştürücü](KULLANIM-KILAVUZU.md#13a-mp4-dönüştürücü).
+
+### Telefonda dosya ya da klasör görünmüyor
+
+Emoji veya `｜ ⧸ ：` gibi karakterler içeren dosya adları bazı cihazlarda dosyanın, hatta bütün klasörün okunamamasına yol açar. **Adları düzelt** kutusu açıkken (varsayılan) bu karakterler ve sondaki `[video kimliği]` dosya adından temizlenir. Eski dosyalar için MP4 Dönüştürücü'de **Dosya adlarını düzelt** kutusunu açık bırakın.
+
+### Durum "Dönüştürülüyor" yazıyor, neden bekliyorum?
+
+İnen video Android uyumlu değilse (AV1/VP9, seçilen kare hızı veya çözünürlük sınırının üstünde) indirme sonunda FFmpeg ile H.264 MP4'e çevrilir. Süre videonun uzunluğuna ve bilgisayarın hızına bağlıdır; satırda ilerleme görünür ve iptal edilebilir. Bekleme istemiyorsanız **Uyumluluk: Orijinal** seçin (dosya bazı cihazlarda oynamayabilir).
 
 ### İndirilen dosyalar nerede?
 

@@ -350,6 +350,8 @@ YouTube ve diğer siteler sık değişir; **"bir anda hiçbir video inmiyor"** d
 
 Üst çubuktaki **MP4 Dönüştürücü** düğmesi, bilgisayarınızdaki videoları (mkv, webm, avi, mov, mp4…) her cihazda görüntülü oynayan MP4'e (H.264 + AAC) çevirir.
 
+<img src="img/donusturucu.png" alt="MP4 Dönüştürücü penceresi" width="720">
+
 1. **Dosya ekle** veya **Klasör ekle**'ye basın ya da videoları pencereye sürükleyin.
 2. **Çözünürlük** (en fazla; 720p önerilir, küçük videolar büyütülmez) ve **Kare hızı** seçin.
 3. **Dosya adlarını düzelt** ve **Zaten uyumlu olanları dönüştürmeden kopyala** kutuları varsayılan olarak açıktır.
